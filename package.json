@@ -11,7 +11,8 @@
     "check:ai-adapter": "node --conditions=react-server scripts/check-ai-adapter.mts",
     "check:ai-controls": "node --conditions=react-server scripts/check-ai-controls.mts",
     "check:ai-ui": "node scripts/check-ai-ui.mts",
-    "check:ci": "npm run validate:fixture && node scripts/check-demo-session.mts && npm run check:ai-adapter && npm run check:ai-controls && npm run check:ai-ui && npm run typecheck && npm run build"
+    "check:data-mapper": "node scripts/check-data-mapper-preview.mts",
+    "check:ci": "npm run validate:fixture && node scripts/check-demo-session.mts && npm run check:ai-adapter && npm run check:ai-controls && npm run check:ai-ui && npm run check:data-mapper && npm run typecheck && npm run build"
   },
   "engines": {
     "node": ">=24.22.1 <25",

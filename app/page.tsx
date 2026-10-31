@@ -33,7 +33,7 @@ export default function HomePage() {
       </div>
 
       <section aria-labelledby="workflow-heading" className="mb-8">
-        <div className="mb-5"><h2 id="workflow-heading" className="section-title">From source data to an integration plan</h2><p className="mt-1 text-xs text-muted">The intended workflow. Each destination currently contains an introductory shell.</p></div>
+        <div className="mb-5"><h2 id="workflow-heading" className="section-title">From source data to an integration plan</h2><p className="mt-1 text-xs text-muted">Data Mapper offers a read-only sample inventory preview. Other destinations currently contain introductory shells.</p></div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {workflow.map((step) => (
             <Link key={step.step} href={step.href} className="workflow-card rounded-xl border border-border bg-surface">

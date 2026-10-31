@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useId, useReducer, useRef } from "react";
-import { CSV_ERRORS, csvDraftReducer, initialCSVDrafts, readCSVFile } from "../../lib/data-mapper/parse-csv";
+import { CSV_ERRORS, readCSVFile } from "../../lib/data-mapper/parse-csv";
 import type { CSVSide } from "../../lib/data-mapper/parse-csv";
+import { columnMappingReducer, initialMappingState } from "../../lib/data-mapper/column-mapping";
+import { ColumnMapping } from "./column-mapping";
 
-export function CSVPreview({ selected }: { selected: CSVSide }) {
-  const [drafts, dispatch] = useReducer(csvDraftReducer, initialCSVDrafts);
+export function CSVPreview({ selected, currency }: { selected: CSVSide; currency: string }) {
+  const [state, dispatch] = useReducer(columnMappingReducer, initialMappingState);
+  const drafts = state.csv;
   const id = useId();
   const generation = useRef(0);
   const mounted = useRef(false);
@@ -14,18 +17,19 @@ export function CSVPreview({ selected }: { selected: CSVSide }) {
   async function choose(side: CSVSide, file: File | undefined) {
     if (!file) return; // Canceling the native picker leaves the draft intact.
     const ticket = ++generation.current;
-    dispatch({ type: "begin", side, generation: ticket });
+    dispatch({ type: "csv", action: { type: "begin", side, generation: ticket } });
     const result = await readCSVFile(file);
-    if (mounted.current) dispatch({ type: "complete", side, generation: ticket, result });
+    if (mounted.current) dispatch({ type: "csv", action: { type: "complete", side, generation: ticket, result } });
   }
   function clear(side: CSVSide) {
-    dispatch({ type: "clear", side, generation: ++generation.current });
+    dispatch({ type: "csv", action: { type: "clear", side, generation: ++generation.current } });
     if (inputs.current[side]) inputs.current[side]!.value = "";
   }
   return <div className="csv-preview">
     {(["buyer", "target"] as const).map((side) => {
       const title = side === "buyer" ? "Buyer" : "Target";
       const draft = drafts[side];
+      const mapping = state.mapping[side];
       return <section key={side} hidden={selected !== side} aria-labelledby={`${id}-${side}-title`}>
         <h3 id={`${id}-${side}-title`} className="section-title">Selected CSV preview (not yet imported) · {title}</h3>
         <p id={`${id}-${side}-privacy`}>For this public preview, select synthetic/test data only. Do not select confidential transaction information. CSV contents are parsed in this browser and are not uploaded to AIVRA servers.</p>
@@ -46,8 +50,11 @@ export function CSVPreview({ selected }: { selected: CSVSide }) {
               <tbody>{draft.preview.rows.map((row, index) => <tr key={index}>{row.map((cell, column) => <td key={column}>{cell}</td>)}</tr>)}</tbody>
             </table>
           </div>
+          {mapping && <ColumnMapping key={`${side}-${draft.generation}`} side={side} source={draft.preview} draft={mapping} currency={currency}
+            onMap={(field, index) => dispatch({ type: "map", side, generation: draft.generation, field, index })}
+            onConfirm={() => dispatch({ type: "confirm", side, generation: draft.generation, revision: mapping.revision })} />}
         </>}
-        <p className="csv-boundary">Preview only. Column mapping, field validation and Confirm will be added in the next unit. Selecting a file does not update the shared deal or run AI.</p>
+        <p className="csv-boundary">CSV and mapping drafts only. Not imported/published. Selecting a file or confirming mapping does not update the shared deal or run AI. Dataset publication belongs to U01.04.</p>
       </section>;
     })}
   </div>;

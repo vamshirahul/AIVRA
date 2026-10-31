@@ -13,7 +13,8 @@
     "check:ai-ui": "node scripts/check-ai-ui.mts",
     "check:data-mapper": "node scripts/check-data-mapper-preview.mts",
     "check:csv-preview": "node scripts/check-csv-preview.mts",
-    "check:ci": "npm run validate:fixture && node scripts/check-demo-session.mts && npm run check:ai-adapter && npm run check:ai-controls && npm run check:ai-ui && npm run check:data-mapper && npm run check:csv-preview && npm run typecheck && npm run build"
+    "check:column-mapping": "node scripts/check-column-mapping.mts",
+    "check:ci": "npm run validate:fixture && node scripts/check-demo-session.mts && npm run check:ai-adapter && npm run check:ai-controls && npm run check:ai-ui && npm run check:data-mapper && npm run check:csv-preview && npm run check:column-mapping && npm run typecheck && npm run build"
   },
   "engines": {
     "node": ">=24.22.1 <25",

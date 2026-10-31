@@ -1,0 +1,125 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "status": 200
+    },
+    {
+      "route": "/integration-health",
+      "status": 200
+    },
+    {
+      "route": "/data-mapper",
+      "status": 200
+    },
+    {
+      "route": "/application-rationalization",
+      "status": 200
+    },
+    {
+      "route": "/license-optimizer",
+      "status": 200
+    },
+    {
+      "route": "/cost-synergy",
+      "status": 200
+    },
+    {
+      "route": "/scenario-modeling",
+      "status": 200
+    },
+    {
+      "route": "/playbook-generator",
+      "status": 200
+    },
+    {
+      "route": "/tsa-tracker",
+      "status": 200
+    },
+    {
+      "route": "/ai-assistant",
+      "status": 200
+    }
+  ],
+  "futureRoutes": [
+    {
+      "route": "/data-migration-readiness-checker",
+      "status": 404
+    },
+    {
+      "route": "/system-dependency-mapper",
+      "status": 404
+    },
+    {
+      "route": "/synergy-realization-tracker",
+      "status": 404
+    },
+    {
+      "route": "/predictive-risk-assessment",
+      "status": 404
+    },
+    {
+      "route": "/portfolio-analytics-reporting",
+      "status": 404
+    },
+    {
+      "route": "/governance-approval-workflow",
+      "status": 404
+    },
+    {
+      "route": "/enterprise-connectors",
+      "status": 404
+    }
+  ],
+  "presentations": [
+    {
+      "width": 1440,
+      "items": 7,
+      "interactive": 0,
+      "distinctIcons": 7,
+      "overflow": false,
+      "contrast": 6.26,
+      "accessibleNamesOnce": true,
+      "clickChangesContentOrURL": false
+    },
+    {
+      "width": 320,
+      "items": 7,
+      "interactive": 0,
+      "distinctIcons": 7,
+      "overflow": false,
+      "contrast": 6.26,
+      "accessibleNamesOnce": true,
+      "clickChangesContentOrURL": false
+    },
+    {
+      "width": 390,
+      "items": 7,
+      "interactive": 0,
+      "distinctIcons": 7,
+      "overflow": false,
+      "contrast": 6.26,
+      "accessibleNamesOnce": true,
+      "clickChangesContentOrURL": false
+    }
+  ],
+  "keyboard": [
+    {
+      "width": 1440,
+      "existingNavigationOrderPreserved": true,
+      "tabSkipsGalleryToMain": true
+    },
+    {
+      "width": 320,
+      "existingNavigationOrderPreserved": true,
+      "tabSkipsGalleryToMain": true
+    },
+    {
+      "width": 390,
+      "existingNavigationOrderPreserved": true,
+      "tabSkipsGalleryToMain": true
+    }
+  ],
+  "accessibility": "Focused DOM, accessibility-tree and contrast checks; no full axe/WCAG suite",
+  "runtimeErrors": []
+}

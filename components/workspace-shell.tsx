@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { navigationGroups } from "../lib/workspace/routes";
+import { FutureFeatures } from "./future-features";
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -48,6 +49,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
               </div>
             ))}
           </nav>
+          <FutureFeatures />
           <div className="sidebar-note"><span className="sidebar-note-title">A workspace taking shape</span><p>Explore the structure. Module tools are not yet implemented.</p></div>
         </aside>
         <div className="workspace-body">

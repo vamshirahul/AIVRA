@@ -70,3 +70,22 @@ focused browser checks, evidence, and manual review steps.
 
 The sidebar also displays seven **Future Features**, each marked **Planned**.
 These are static icons and labels, with no links, keyboard stops or functionality.
+
+## Browser demo session (U00.05)
+
+The current synthetic deal is shared across routes and saved in this tab's
+`sessionStorage`. Same-tab refresh restores validated edits. A normal new tab has
+its own session; duplicated/opener tabs may start with a copied snapshot under
+browser rules. This is temporary browser storage, not secure confidential-data
+storage. Use fictional data only.
+
+**Reset demo session** asks for inline confirmation. **Cancel** keeps the current
+data; **Confirm reset** restores the original example and clears analysis metadata.
+If browser storage is unavailable, the session continues in memory with a notice
+that changes may be lost on refresh. Invalid saved data recovers to the original
+example with a recovery notice. Home names/counts now follow the current session.
+
+Run `node scripts/check-demo-session.mts` for focused state/persistence checks.
+See [the session contract](docs/contracts/U00.05_Browser_Session_Contract.md) for
+typed update/freshness APIs and [validation evidence](U00.05_VALIDATION.md) for
+browser commands and limitations.

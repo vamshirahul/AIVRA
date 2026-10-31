@@ -91,6 +91,12 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .future-feature-label { display: block; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .future-feature-status { display: block; margin-top: 2px; font-size: 10px; line-height: 1.5; }
 
+.session-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 18px; margin-bottom: 24px; border-bottom: 1px solid var(--border); }
+.session-status { flex: 1 1 250px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.session-status p { margin-top: 6px; }
+.session-confirmation { flex: 1 1 350px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.session-confirmation p { margin-bottom: 12px; font-size: 12px; line-height: 1.7; }
+
 @media (max-width: 1023px) {
   .workspace-header { flex-wrap: wrap; padding: 16px 20px; gap: 12px; }
   .brand { font-size: 18px; }

@@ -45,9 +45,9 @@ for field definitions, versions, null handling, and future module import paths.
 ## Responsive workspace (U00.03)
 
 The current UI uses the founder-approved **A1 Coastal Navy** theme (ADR-011).
-Home shows counts from the bundled fictional dataset. The nine module pages
-provide introductions and explicit **not yet implemented** states. No module
-actions or AI integration are available yet.
+Home shows counts from the shared fictional session. Data Mapper now offers a
+read-only Buyer/Target application inventory preview; the other eight module
+pages retain explicit **not yet implemented** introductions. AI remains disabled.
 
 | Group | Page | Route |
 | --- | --- | --- |
@@ -71,6 +71,12 @@ focused browser checks, evidence, and manual review steps.
 
 The sidebar also displays seven **Future Features**, each marked **Planned**.
 These are static icons and labels, with no links, keyboard stops or functionality.
+
+Data Mapper tabs show current session source fields and stable IDs, with a
+keyboard-accessible scrollable table. CSV upload, column mapping and dataset
+confirmation remain later work. Run `npm run check:data-mapper` (also included in
+`check:ci`). See the [inventory view contract](docs/contracts/U01.01_Sample_Inventory_View_Contract.md)
+and [validation record](U01.01_VALIDATION.md).
 
 ## Browser demo session (U00.05)
 

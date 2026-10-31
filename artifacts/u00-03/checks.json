@@ -1,0 +1,287 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "status": 200,
+      "title": "M&A integration workspace",
+      "activeLink": "/",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/integration-health",
+      "status": 200,
+      "title": "Integration Health Dashboard",
+      "activeLink": "/integration-health",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/data-mapper",
+      "status": 200,
+      "title": "Data Mapper Engine",
+      "activeLink": "/data-mapper",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/application-rationalization",
+      "status": 200,
+      "title": "Application Rationalization",
+      "activeLink": "/application-rationalization",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/license-optimizer",
+      "status": 200,
+      "title": "License Optimizer",
+      "activeLink": "/license-optimizer",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/cost-synergy",
+      "status": 200,
+      "title": "Cost Synergy Estimator",
+      "activeLink": "/cost-synergy",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/scenario-modeling",
+      "status": 200,
+      "title": "Scenario / What-if Modeling",
+      "activeLink": "/scenario-modeling",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/playbook-generator",
+      "status": 200,
+      "title": "Playbook Generator",
+      "activeLink": "/playbook-generator",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/tsa-tracker",
+      "status": 200,
+      "title": "TSA Tracker",
+      "activeLink": "/tsa-tracker",
+      "navigationLinks": 10
+    },
+    {
+      "route": "/ai-assistant",
+      "status": 200,
+      "title": "AI M&A Assistant",
+      "activeLink": "/ai-assistant",
+      "navigationLinks": 10
+    }
+  ],
+  "viewports": [
+    {
+      "width": 320,
+      "horizontalOverflow": false,
+      "pages": 3
+    },
+    {
+      "width": 390,
+      "horizontalOverflow": false,
+      "pages": 3
+    },
+    {
+      "width": 768,
+      "horizontalOverflow": false,
+      "pages": 3
+    },
+    {
+      "width": 1024,
+      "horizontalOverflow": false,
+      "pages": 3
+    },
+    {
+      "width": 1440,
+      "horizontalOverflow": false,
+      "pages": 3
+    }
+  ],
+  "keyboard": [
+    "Skip link is the first tab stop, visibly focused, and targets main",
+    "Enter opens navigation; all 10 links reachable by Tab; Escape closes and returns focus",
+    "Space toggles menu; Escape also works at toggle; choosing a route closes navigation and updates active state"
+  ],
+  "accessibility": [
+    {
+      "page": "/",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": [
+            {
+              "target": [
+                ".text-link > span[aria-hidden=\"true\"]"
+              ],
+              "reason": "Fix any of the following:\n  Element content contains only non-text characters"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "page": "/integration-health",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "/data-mapper",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "/application-rationalization",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "/license-optimizer",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "/cost-synergy",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "/scenario-modeling",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "/playbook-generator",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "/tsa-tracker",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "/ai-assistant",
+      "violations": [],
+      "incomplete": []
+    },
+    {
+      "page": "mobile menu open",
+      "violations": [],
+      "incomplete": [
+        {
+          "id": "color-contrast",
+          "nodes": [
+            {
+              "target": [
+                ".text-link > span[aria-hidden=\"true\"]"
+              ],
+              "reason": "Fix any of the following:\n  Element content contains only non-text characters"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "page": "mobile module",
+      "violations": [],
+      "incomplete": []
+    }
+  ],
+  "palette": {
+    "background": "#F7F9FC",
+    "surface": "#FFFFFF",
+    "foreground": "#152B46",
+    "accent": "#206F81",
+    "border": "#CBD5E1",
+    "muted": "#4C627E"
+  },
+  "contrast": [
+    {
+      "foreground": "foreground",
+      "background": "background",
+      "ratio": 13.58,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "background",
+      "ratio": 5.93,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "surface",
+      "ratio": 6.26,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "foreground",
+      "ratio": 14.33,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "accent",
+      "ratio": 5.75,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "surface",
+      "background": "accent-hover",
+      "ratio": 7.76,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "accent",
+      "background": "surface",
+      "ratio": 5.75,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "accent",
+      "background": "accent-soft",
+      "ratio": 5.1,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "muted",
+      "background": "disabled",
+      "ratio": 5.32,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "success",
+      "background": "success-surface",
+      "ratio": 6.53,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "warning",
+      "background": "warning-surface",
+      "ratio": 5.52,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "error",
+      "background": "error-surface",
+      "ratio": 5.93,
+      "minimum": 4.5
+    },
+    {
+      "foreground": "focus",
+      "background": "surface",
+      "ratio": 5.75,
+      "minimum": 3
+    },
+    {
+      "foreground": "focus",
+      "background": "background",
+      "ratio": 5.45,
+      "minimum": 3
+    }
+  ],
+  "consoleErrors": []
+}

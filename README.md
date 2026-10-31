@@ -40,3 +40,30 @@ Run `npm run validate:fixture` to check the shared Zod contracts, fictional
 Northstar/Meridian dataset, record links, and deliberately invalid cases.
 See [the shared demo data contract](docs/contracts/U00.02_Shared_Demo_Data_Contract.md)
 for field definitions, versions, null handling, and future module import paths.
+
+## Responsive workspace (U00.03)
+
+The current UI uses the founder-approved **A1 Coastal Navy** theme (ADR-011).
+Home shows counts from the bundled fictional dataset. The nine module pages
+provide introductions and explicit **not yet implemented** states. No module
+actions or AI integration are available yet.
+
+| Group | Page | Route |
+| --- | --- | --- |
+| Overview | Home | `/` |
+| Overview | Integration Health Dashboard | `/integration-health` |
+| Prepare | Data Mapper Engine | `/data-mapper` |
+| Analyze | Application Rationalization | `/application-rationalization` |
+| Analyze | License Optimizer | `/license-optimizer` |
+| Model | Cost Synergy Estimator | `/cost-synergy` |
+| Model | Scenario / What-if Modeling | `/scenario-modeling` |
+| Execute | Playbook Generator | `/playbook-generator` |
+| Execute | TSA Tracker | `/tsa-tracker` |
+| Ask AIVRA | AI M&A Assistant | `/ai-assistant` |
+
+Below 1024px, **Open menu** expands the same navigation in the page flow.
+Enter/Space toggles it; Escape closes it and returns focus to the toggle.
+Selecting a destination closes it. The first keyboard stop skips to main content.
+
+See [U00.03 validation and screenshots](U00.03_VALIDATION.md) for design tokens,
+focused browser checks, evidence, and manual review steps.

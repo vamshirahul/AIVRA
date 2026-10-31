@@ -73,10 +73,15 @@ The sidebar also displays seven **Future Features**, each marked **Planned**.
 These are static icons and labels, with no links, keyboard stops or functionality.
 
 Data Mapper tabs show current session source fields and stable IDs, with a
-keyboard-accessible scrollable table. CSV upload, column mapping and dataset
-confirmation remain later work. Run `npm run check:data-mapper` (also included in
-`check:ci`). See the [inventory view contract](docs/contracts/U01.01_Sample_Inventory_View_Contract.md)
-and [validation record](U01.01_VALIDATION.md).
+keyboard-accessible scrollable table. Independent Buyer/Target CSV drafts now
+parse locally for preview only: UTF-8 `.csv`, at most 500,000 bytes and 50 data rows.
+Select synthetic/test data only; no confidential transaction information. Drafts
+are not uploaded or saved, do not change the shared deal, and disappear on leaving
+the module/refresh. Column mapping, field validation and Confirm remain later work.
+Run `npm run check:data-mapper` and `npm run check:csv-preview` (both in `check:ci`).
+See the [inventory contract](docs/contracts/U01.01_Sample_Inventory_View_Contract.md),
+[CSV draft contract](docs/contracts/U01.02_CSV_Selection_Preview_Contract.md) and
+[U01.02 validation](U01.02_VALIDATION.md).
 
 ## Browser demo session (U00.05)
 

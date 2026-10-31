@@ -5,6 +5,7 @@ import type { KeyboardEvent } from "react";
 import { useDemoSession } from "../demo-session-provider";
 import { INVENTORY_COLUMNS, inventoryForSide, inventoryValue } from "../../lib/data-mapper/inventory-view";
 import type { InventorySide } from "../../lib/data-mapper/inventory-view";
+import { CSVPreview } from "./csv-preview";
 
 const sides = ["buyer", "target"] as const;
 export function SampleInventoryPreview() {
@@ -24,7 +25,7 @@ export function SampleInventoryPreview() {
       <p className="badge">Sample inventory preview available</p>
       <h2 className="section-title">Buyer and Target applications</h2>
       <p className="inventory-disclosure">Synthetic example data · Dataset {deal.dataset_version} · Read-only source preview</p>
-      <p className="inventory-boundary">CSV upload, column mapping and dataset confirmation are coming later. No import or AI analysis has been run.</p>
+      <p className="inventory-boundary">Preview local CSV drafts below. Column mapping and dataset confirmation are coming later. No import or AI analysis has been run.</p>
       <div className="inventory-tabs" role="tablist" aria-label="Application inventory side">
         {sides.map((side) => <button key={side} type="button" role="tab" id={`${id}-${side}-tab`} aria-controls={`${id}-${side}-panel`}
           aria-selected={selected === side} tabIndex={selected === side ? 0 : -1}
@@ -33,6 +34,7 @@ export function SampleInventoryPreview() {
           <span>{inventoryForSide(deal.applications, side).length} applications{selected === side ? " · Selected" : ""}</span>
         </button>)}
       </div>
+      <h3 className="section-title">Sample inventory (current shared session)</h3>
       {sides.map((side) => {
         const applications = inventoryForSide(deal.applications, side);
         const title = side === "buyer" ? "Buyer" : "Target";
@@ -52,6 +54,7 @@ export function SampleInventoryPreview() {
           </>)}
         </div>;
       })}
+      <CSVPreview selected={selected} />
     </section>
   );
 }

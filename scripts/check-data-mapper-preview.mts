@@ -16,7 +16,7 @@ const deal = initial.current_deal;
 const rows = (side: "buyer" | "target") => inventoryForSide(controller.getSnapshot().session!.current_deal.applications, side);
 const display = (side: "buyer" | "target") => rows(side).map((app) => INVENTORY_COLUMNS.map(([field]) => inventoryValue(app, field, deal.currency)));
 
-if (!process.argv.includes("--browser") && !process.argv.includes("--csv-browser")) {
+if (!process.argv.includes("--browser") && !process.argv.includes("--csv-browser") && !process.argv.includes("--mapping-browser")) {
   const fetchBefore = globalThis.fetch; let attempts = 0;
   globalThis.fetch = async () => { attempts++; throw new Error("Inventory checks forbid network"); };
   try {
@@ -109,7 +109,10 @@ if (!process.argv.includes("--browser") && !process.argv.includes("--csv-browser
     async function key(name: string, code: number) { for (const type of ["keyDown", "keyUp"]) await page("Input.dispatchKeyEvent", { type, key: name, code: name, windowsVirtualKeyCode: code }); }
     await page("Page.enable"); await page("Runtime.enable"); await page("Fetch.enable", { patterns: [{ urlPattern: "*" }] });
     await navigate("/data-mapper"); await until("!!document.querySelector('[role=tab]')");
-    if (process.argv.includes("--csv-browser")) {
+    if (process.argv.includes("--mapping-browser")) {
+      const { checkMappingBrowser } = await import("./check-column-mapping.mts");
+      await checkMappingBrowser({ page, evaluate, until, navigate, key, base });
+    } else if (process.argv.includes("--csv-browser")) {
       const { checkCSVBrowser } = await import("./check-csv-preview.mts");
       await checkCSVBrowser({ page, evaluate, until, navigate, key, base });
     } else {
@@ -155,7 +158,7 @@ if (!process.argv.includes("--browser") && !process.argv.includes("--csv-browser
     for (const route of routes) { const response = await fetch(`${base}${route}`); assert.equal(response.status, 200); if (route !== "/" && route !== "/data-mapper") assert.match(await response.text(), /Not yet implemented/); }
     }
     assert.deepEqual(errors, []); assert.equal(external, 0);
-    if (!process.argv.includes("--csv-browser")) console.log("PASS: actual Chromium at 1440/390/320px; both inventories/all cells, tab keyboard/focus/wrap, scroll containment, unchanged storage/revisions/metadata, edited reload/navigation, escaped notes, global reset, ten routes/inert gallery; zero external requests or runtime errors");
+    if (!process.argv.includes("--csv-browser") && !process.argv.includes("--mapping-browser")) console.log("PASS: actual Chromium at 1440/390/320px; both inventories/all cells, tab keyboard/focus/wrap, scroll containment, unchanged storage/revisions/metadata, edited reload/navigation, escaped notes, global reset, ten routes/inert gallery; zero external requests or runtime errors");
     else console.log("PASS: CSV browser harness observed zero external page requests or runtime errors");
   } finally { socket?.close(); browser.kill(); }
 }

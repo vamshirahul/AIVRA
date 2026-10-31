@@ -77,11 +77,16 @@ keyboard-accessible scrollable table. Independent Buyer/Target CSV drafts now
 parse locally for preview only: UTF-8 `.csv`, at most 500,000 bytes and 50 data rows.
 Select synthetic/test data only; no confidential transaction information. Drafts
 are not uploaded or saved, do not change the shared deal, and disappear on leaving
-the module/refresh. Column mapping, field validation and Confirm remain later work.
-Run `npm run check:data-mapper` and `npm run check:csv-preview` (both in `check:ci`).
+the module/refresh. Manual column mapping, schema validation and **Confirm Mapping**
+now produce a **Mapping confirmed (draft only)** state. **Not imported/published**:
+shared inventory publication remains exclusively U01.04. Source IDs/name/function
+are required; optional blanks become null; no IDs or mappings are guessed.
+Run `npm run check:data-mapper`, `npm run check:csv-preview` and
+`npm run check:column-mapping` (all in `check:ci`).
 See the [inventory contract](docs/contracts/U01.01_Sample_Inventory_View_Contract.md),
 [CSV draft contract](docs/contracts/U01.02_CSV_Selection_Preview_Contract.md) and
-[U01.02 validation](U01.02_VALIDATION.md).
+[mapping contract](docs/contracts/U01.03_Column_Mapping_Validation_Contract.md) and
+[U01.03 validation](U01.03_VALIDATION.md).
 
 ## Browser demo session (U00.05)
 

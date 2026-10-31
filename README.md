@@ -89,3 +89,12 @@ Run `node scripts/check-demo-session.mts` for focused state/persistence checks.
 See [the session contract](docs/contracts/U00.05_Browser_Session_Contract.md) for
 typed update/freshness APIs and [validation evidence](U00.05_VALIDATION.md) for
 browser commands and limitations.
+
+## Internal AI adapter (U00.06)
+
+The server-only AI SDK adapter is an offline-testable foundation, not an enabled
+AI feature. There are no public AI endpoints; live OpenAI dispatch remains
+hard-blocked until U00.07 supplies budget/rate/concurrency authorization.
+No API key is needed to run `npm run check:ai-adapter`.
+See [the adapter contract](docs/contracts/U00.06_Server_AI_Adapter_Contract.md)
+and [validation results](U00.06_VALIDATION.md).

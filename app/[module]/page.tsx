@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { Arrow, Badge, ButtonLink, Card } from "../../components/ui";
 import { workspaceModules } from "../../lib/workspace/routes";
+import { AIStatusNotice } from "../../components/ai/ai-status-notice";
 
 export const dynamicParams = false;
 
@@ -32,6 +33,7 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
       <p className="eyebrow">{module.group}</p>
       <h1 className="page-title">{module.title}</h1>
       <p className="page-description">{module.purpose}</p>
+      {["/application-rationalization", "/license-optimizer", "/playbook-generator", "/ai-assistant"].includes(module.href) && <AIStatusNotice state={{ status: "not_enabled" }} />}
 
       <Card className="mt-9 px-6 py-9 sm:p-10">
         <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-background text-muted" aria-hidden="true">

@@ -76,17 +76,21 @@ Data Mapper tabs show current session source fields and stable IDs, with a
 keyboard-accessible scrollable table. Independent Buyer/Target CSV drafts now
 parse locally for preview only: UTF-8 `.csv`, at most 500,000 bytes and 50 data rows.
 Select synthetic/test data only; no confidential transaction information. Drafts
-are not uploaded or saved, do not change the shared deal, and disappear on leaving
-the module/refresh. Manual column mapping, schema validation and **Confirm Mapping**
-now produce a **Mapping confirmed (draft only)** state. **Not imported/published**:
-shared inventory publication remains exclusively U01.04. Source IDs/name/function
-are required; optional blanks become null; no IDs or mappings are guessed.
+are not uploaded or saved and disappear on leaving the module/refresh. Manual
+mapping and **Confirm Mapping** produce a **Mapping confirmed (draft only)** state.
+A separate reviewed **Publish to demo session** action can replace that side's
+shared applications in browser-tab session storage. Colliding IDs or orphaned
+license/TSA links block publication; linked records are never repaired/deleted.
+Source IDs/name/function are required; optional blanks become null; no IDs or
+mappings are guessed. Meaningful publication increments the application source
+revision; fixture dataset version remains 1.0.0. No-op publication changes nothing.
 Run `npm run check:data-mapper`, `npm run check:csv-preview` and
-`npm run check:column-mapping` (all in `check:ci`).
+`npm run check:column-mapping` and `npm run check:publish-applications` (all in `check:ci`).
 See the [inventory contract](docs/contracts/U01.01_Sample_Inventory_View_Contract.md),
 [CSV draft contract](docs/contracts/U01.02_CSV_Selection_Preview_Contract.md) and
 [mapping contract](docs/contracts/U01.03_Column_Mapping_Validation_Contract.md) and
-[U01.03 validation](U01.03_VALIDATION.md).
+[publication contract](docs/contracts/U01.04_Published_Session_Dataset_Contract.md) and
+[U01.04 validation](U01.04_VALIDATION.md).
 
 ## Browser demo session (U00.05)
 

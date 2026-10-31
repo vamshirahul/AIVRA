@@ -1,2 +1,35 @@
 # AIVRA
 M&amp;A / Divestiture Activity Helper
+
+## Local development (U00.01)
+
+Use Node.js 24 LTS (24.22.1 or newer within major 24) and npm 11.
+The verified environment is Node.js 24.22.1 and npm 11.19.1;
+`.nvmrc` records the tested Node version. Install from the repository root:
+
+```sh
+npm ci
+npm run dev
+```
+
+Open <http://localhost:3000> to see **AIVRA Public Preview**. No sign-in,
+environment variables, API keys, or external services are required.
+Stop the server with Ctrl+C.
+
+Validate and run the production build locally:
+
+```sh
+npm run build
+npm run typecheck
+npm start
+```
+
+On Windows PowerShell, use `npm.cmd` in place of `npm` if execution policy
+blocks `npm.ps1`. Development and production servers use the same default
+port, so stop one before starting the other.
+
+This unit supplies only Next.js, React, TypeScript, and a plain public index
+route. Browser-default styling is temporary; the visual system and workspace
+shell belong to later approved units. Lint is not configured in this minimal
+foundation. Dependency versions are pinned in `package.json` and
+`package-lock.json`; use `npm ci` to reproduce them.

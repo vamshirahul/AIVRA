@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
-    "validate:fixture": "node scripts/validate-fixture.mts"
+    "validate:fixture": "node scripts/validate-fixture.mts",
+    "check:ai-adapter": "node --conditions=react-server scripts/check-ai-adapter.mts"
   },
   "engines": {
     "node": ">=24.22.1 <25",
@@ -15,9 +16,12 @@
   },
   "packageManager": "npm@11.19.1",
   "dependencies": {
+    "@ai-sdk/openai": "4.0.106",
+    "ai": "7.0.159",
     "next": "16.4.3",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "server-only": "0.0.1",
     "zod": "4.6.7"
   },
   "devDependencies": {

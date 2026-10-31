@@ -67,3 +67,6 @@ Selecting a destination closes it. The first keyboard stop skips to main content
 
 See [U00.03 validation and screenshots](U00.03_VALIDATION.md) for design tokens,
 focused browser checks, evidence, and manual review steps.
+
+The sidebar also displays seven **Future Features**, each marked **Planned**.
+These are static icons and labels, with no links, keyboard stops or functionality.

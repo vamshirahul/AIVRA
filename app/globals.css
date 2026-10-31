@@ -97,6 +97,16 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .session-confirmation { flex: 1 1 350px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
 .session-confirmation p { margin-bottom: 12px; font-size: 12px; line-height: 1.7; }
 
+.ai-notice { margin-top: 24px; padding: 14px 16px; border: 1px solid var(--border); border-inline-start: 3px solid currentColor; border-radius: 6px; color: var(--foreground); background: var(--surface); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.ai-notice p { margin: 0; }
+.ai-notice p + p { margin-top: 6px; }
+.ai-notice-title { font-weight: 650; }
+.ai-notice--activity { color: var(--accent); background: var(--accent-soft); }
+.ai-notice--complete { color: var(--success); background: var(--success-surface); }
+.ai-notice--fallback { color: var(--warning); background: var(--warning-surface); }
+.ai-notice--error { color: var(--error); background: var(--error-surface); }
+.ai-notice-stale { font-weight: 650; }
+
 @media (max-width: 1023px) {
   .workspace-header { flex-wrap: wrap; padding: 16px 20px; gap: 12px; }
   .brand { font-size: 18px; }

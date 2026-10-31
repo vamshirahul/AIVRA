@@ -109,3 +109,12 @@ The in-memory store is a deterministic test fake, not a production budget store.
 Run `npm run check:ai-controls` and `npm run check:ai-adapter` for offline tests.
 See [the control/routing contract](docs/contracts/U00.07_AI_Budget_Routing_Contract.md)
 and [U00.07 validation](U00.07_VALIDATION.md) for remaining activation gates.
+
+## Shared AI feedback (U00.08 — in review)
+
+The four AI-intended introductions show “AI not enabled.” A reusable read-only
+notice supports loading, validated paid/fallback provenance, safe errors and
+owner-supplied stale status for future modules. No AI action or endpoint is enabled.
+Run `npm run check:ai-ui` for offline presentation checks. See the
+[UI state contract](docs/contracts/U00.08_AI_UI_State_Contract.md) and
+[U00.08 validation](U00.08_VALIDATION.md).

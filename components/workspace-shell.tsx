@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { navigationGroups } from "../lib/workspace/routes";
 import { FutureFeatures } from "./future-features";
+import { DemoSessionControls } from "./demo-session-controls";
 
 export function WorkspaceShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -53,7 +54,7 @@ export function WorkspaceShell({ children }: { children: ReactNode }) {
           <div className="sidebar-note"><span className="sidebar-note-title">A workspace taking shape</span><p>Explore the structure. Module tools are not yet implemented.</p></div>
         </aside>
         <div className="workspace-body">
-          <main id="main-content" tabIndex={-1}>{children}</main>
+          <main id="main-content" tabIndex={-1}><DemoSessionControls />{children}</main>
           <footer className="workspace-footer">Public preview • Synthetic example data • AI-generated analysis is illustrative, not transaction advice.</footer>
         </div>
       </div>

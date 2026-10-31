@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Arrow, Badge, ButtonLink, Card } from "../components/ui";
-import { loadSyntheticDealFixture } from "../lib/fixtures/synthetic-deal";
+import { DemoDealSummary } from "../components/demo-deal-summary";
 
 const workflow = [
   { step: "01", title: "Prepare", text: "Start with consistent Buyer and Target application inventories.", href: "/data-mapper", link: "Data Mapper Engine" },
@@ -10,14 +10,6 @@ const workflow = [
 ];
 
 export default function HomePage() {
-  const fixture = loadSyntheticDealFixture();
-  const counts = [
-    { label: "Buyer applications", count: fixture.applications.filter((app) => app.company_side === "buyer").length },
-    { label: "Target applications", count: fixture.applications.filter((app) => app.company_side === "target").length },
-    { label: "License positions", count: fixture.license_positions.length },
-    { label: "TSA services", count: fixture.tsa_services.length },
-  ];
-
   return (
     <div className="page-container">
       <p className="breadcrumb"><span>Workspace</span><span aria-hidden="true">/</span><span>Overview</span></p>
@@ -31,20 +23,7 @@ export default function HomePage() {
       </div>
 
       <div className="mb-9 grid gap-5 xl:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
-        <Card className="overflow-hidden">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-6 py-4">
-            <h2 className="section-title">The example deal</h2><Badge>Synthetic data</Badge>
-          </div>
-          <div className="flex items-center gap-6 px-6 py-6 sm:gap-10">
-            <div className="min-w-0"><p className="mb-1 text-xs text-muted">Buyer</p><p className="text-xl font-semibold tracking-tight">{fixture.buyer_name}</p></div>
-            <span className="text-muted" aria-hidden="true"><Arrow /></span>
-            <div className="min-w-0"><p className="mb-1 text-xs text-muted">Target</p><p className="text-xl font-semibold tracking-tight">{fixture.target_name}</p></div>
-          </div>
-          <dl className="grid grid-cols-2 gap-y-6 border-t border-border bg-background px-6 py-5 sm:grid-cols-4">
-            {counts.map((item) => <div key={item.label}><dt className="text-[11px] text-muted">{item.label}</dt><dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{item.count}</dd></div>)}
-          </dl>
-          <p className="px-6 py-3 text-[11px] text-muted">Bundled source records only · Dataset {fixture.dataset_version} · No analysis has been run</p>
-        </Card>
+        <DemoDealSummary />
         <Card className="flex flex-col items-start p-6">
           <Badge>Workspace shell</Badge>
           <h2 className="section-title mt-5 mb-3">Explore what’s taking shape</h2>

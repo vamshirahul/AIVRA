@@ -1,0 +1,13 @@
+{
+  "checks": [
+    "Fresh tab: valid synthetic 15/15/10/5 source, CAD and empty registry",
+    "Shared context restores controller-updated app/license/TSA records; live counts/names, SPA navigation and refresh preserve state",
+    "Keyboard confirmation/cancel names and focus; Cancel preserves edits, Confirm reset restores and persists empty analysis state",
+    "Bad JSON, incompatible schema and dangling reference recover to fixture with non-sensitive notice",
+    "Quota failure shows memory-only notice; reset removes old persisted edit and cannot resurrect it on refresh",
+    "Denied sessionStorage does not break session, reset or navigation",
+    "Ten public routes; seven inert placeholders; confirmation wraps at 320/390px; zero hydration/console/runtime errors"
+  ],
+  "runtimeErrors": [],
+  "limitations": "Focused Chromium keyboard/DOM/AX checks; no full WCAG or physical-device test. Browser input is seeded through the real validated controller; no production test globals."
+}

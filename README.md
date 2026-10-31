@@ -33,3 +33,10 @@ route. Browser-default styling is temporary; the visual system and workspace
 shell belong to later approved units. Lint is not configured in this minimal
 foundation. Dependency versions are pinned in `package.json` and
 `package-lock.json`; use `npm ci` to reproduce them.
+
+## Shared synthetic data (U00.02)
+
+Run `npm run validate:fixture` to check the shared Zod contracts, fictional
+Northstar/Meridian dataset, record links, and deliberately invalid cases.
+See [the shared demo data contract](docs/contracts/U00.02_Shared_Demo_Data_Contract.md)
+for field definitions, versions, null handling, and future module import paths.

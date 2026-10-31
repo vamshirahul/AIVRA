@@ -98,3 +98,14 @@ hard-blocked until U00.07 supplies budget/rate/concurrency authorization.
 No API key is needed to run `npm run check:ai-adapter`.
 See [the adapter contract](docs/contracts/U00.06_Server_AI_Adapter_Contract.md)
 and [validation results](U00.06_VALIDATION.md).
+
+## AI budget and fallback foundation (U00.07 — in review)
+
+The internal router now supports independently capped paid/fallback paths,
+atomic reservation/settlement contracts, anonymous/global rate windows and
+concurrency leases. Live dispatch remains disabled, and no public AI API exists.
+The in-memory store is a deterministic test fake, not a production budget store.
+
+Run `npm run check:ai-controls` and `npm run check:ai-adapter` for offline tests.
+See [the control/routing contract](docs/contracts/U00.07_AI_Budget_Routing_Contract.md)
+and [U00.07 validation](U00.07_VALIDATION.md) for remaining activation gates.

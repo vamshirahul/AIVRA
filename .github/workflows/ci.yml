@@ -1,0 +1,42 @@
+name: Foundation CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  foundation-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      AIVRA_AI_ENABLED: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - name: Set up pinned npm
+        run: |
+          npm install --global npm@11.19.1 --no-audit --no-fund
+          node --version
+          npm --version
+          test "$(npm --version)" = "$(node -p "require('./package.json').packageManager.split('@')[1]")"
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Offline foundation checks
+        run: npm run check:ci

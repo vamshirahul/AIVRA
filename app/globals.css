@@ -124,6 +124,16 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .inventory-table td:last-child { min-width: 240px; }
 .inventory-loading, .inventory-empty { padding: 20px 0; color: var(--muted); }
 
+.csv-preview { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); min-width: 0; }
+.csv-preview p { margin-top: 10px; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.csv-file-label { display: block; margin-top: 16px; margin-bottom: 6px; font-weight: 650; }
+.csv-preview input[type="file"] { display: block; width: 100%; max-width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); font: inherit; }
+.csv-clear { margin-top: 10px; }
+.csv-preview .csv-error { padding: 12px; color: var(--error); background: var(--error-surface); border-inline-start: 3px solid var(--error); }
+.csv-preview .csv-boundary { color: var(--foreground); }
+.csv-table { min-width: 600px; }
+.csv-table th, .csv-table td { white-space: pre-wrap; }
+
 @media (max-width: 1023px) {
   .workspace-header { flex-wrap: wrap; padding: 16px 20px; gap: 12px; }
   .brand { font-size: 18px; }

@@ -38,15 +38,18 @@ export const EnvelopeMetadataSchema = ModelIdentitySchema.extend({
   module: ModuleSchema,
   request_id: z.uuid(),
   input_digest: z.string().regex(/^[a-f0-9]{64}$/),
-  mode: z.literal("paid"),
+  mode: z.enum(["paid", "fallback"]),
+  routing_reason: z.enum(["budget_exhausted", "paid_unavailable"]).optional(),
   prompt_version: InvocationSchema.shape.prompt_version,
   generated_at: z.iso.datetime(),
   usage_estimate: UsageEstimateSchema,
   warnings: z.array(z.enum(["ai_generated_draft", "references_not_narrative_verification"])).max(2),
 });
-export function resultEnvelopeSchema<T>(schema: z.ZodType<T>) { return EnvelopeMetadataSchema.extend({ data: schema }); }
+export function resultEnvelopeSchema<T>(schema: z.ZodType<T>) { return EnvelopeMetadataSchema.extend({ data: schema }).superRefine((envelope, ctx) => {
+  if ((envelope.mode === "fallback") !== (envelope.routing_reason !== undefined)) ctx.addIssue({ code: "custom", path: ["routing_reason"], message: "Only fallback results require a routing reason" });
+}); }
 export type ResultEnvelope<T> = z.infer<typeof EnvelopeMetadataSchema> & { data: T };
-export const FailureCodeSchema = z.enum(["invalid_input", "invalid_model_output", "provider_unavailable", "request_too_large", "unexpected_error", "ai_not_enabled", "ai_controls_not_ready"]);
+export const FailureCodeSchema = z.enum(["invalid_input", "invalid_model_output", "provider_unavailable", "request_too_large", "unexpected_error", "ai_not_enabled", "ai_controls_not_ready", "ai_disabled", "controls_unavailable", "rate_limited", "capacity_reached", "paid_budget_exhausted", "fallback_unavailable", "duplicate_request"]);
 export type FailureCode = z.infer<typeof FailureCodeSchema>;
 export const FailureSchema = z.strictObject({ ok: z.literal(false), error: z.strictObject({ code: FailureCodeSchema, request_id: z.uuid(), message: z.string().max(160) }) });
 export type AdapterResult<T> = { ok: true; result: ResultEnvelope<T> } | z.infer<typeof FailureSchema>;
@@ -58,13 +61,20 @@ const messages: Record<FailureCode, string> = {
   unexpected_error: "The AI request could not be completed.",
   ai_not_enabled: "AI requests are disabled.",
   ai_controls_not_ready: "Live AI requests require budget and rate-limit authorization that is not implemented yet.",
+  ai_disabled: "AI routing is disabled.",
+  controls_unavailable: "AI usage controls are unavailable. No further request is authorized.",
+  rate_limited: "The anonymous AI request limit has been reached.",
+  capacity_reached: "AI request capacity is currently full.",
+  paid_budget_exhausted: "The paid AI request allowance is exhausted.",
+  fallback_unavailable: "The independently controlled fallback is unavailable.",
+  duplicate_request: "This AI request has already been handled or reserved.",
 };
 export function failure(code: FailureCode, request_id: string) { return FailureSchema.parse({ ok: false, error: { code, request_id, message: messages[code] } }); }
 export class TransportFailure extends Error {
   readonly code: FailureCode;
   constructor(code: FailureCode) { super(messages[code]); this.name = "TransportFailure"; this.code = code; }
 }
-export type TransportCall = { input: InvocationInput; schema: z.ZodType; signal: AbortSignal };
+export type TransportCall = { input: InvocationInput; schema: z.ZodType; signal: AbortSignal; max_output_tokens?: number };
 export type TransportResult = { output: unknown; usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number } };
 export type StructuredTransport = {
   model_provider: string;

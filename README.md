@@ -1,9 +1,9 @@
 # AIVRA
 M&amp;A / Divestiture Activity Helper
 
-## Local development (U00.01)
+## Local development
 
-Use Node.js 24 LTS (24.22.1 or newer within major 24) and npm 11.
+Use Node.js 24.22.1 (supported engine: 24.22.1 or newer within major 24) and npm 11.19.1.
 The verified environment is Node.js 24.22.1 and npm 11.19.1;
 `.nvmrc` records the tested Node version. Install from the repository root:
 
@@ -16,11 +16,10 @@ Open <http://localhost:3000> to see **AIVRA Public Preview**. No sign-in,
 environment variables, API keys, or external services are required.
 Stop the server with Ctrl+C.
 
-Validate and run the production build locally:
+Run the shared offline checks (includes TypeScript and one production build):
 
 ```sh
-npm run build
-npm run typecheck
+npm run check:ci
 npm start
 ```
 
@@ -28,11 +27,13 @@ On Windows PowerShell, use `npm.cmd` in place of `npm` if execution policy
 blocks `npm.ps1`. Development and production servers use the same default
 port, so stop one before starting the other.
 
-This unit supplies only Next.js, React, TypeScript, and a plain public index
-route. Browser-default styling is temporary; the visual system and workspace
-shell belong to later approved units. Lint is not configured in this minimal
-foundation. Dependency versions are pinned in `package.json` and
-`package-lock.json`; use `npm ci` to reproduce them.
+The current A1 Coastal Navy workspace includes shared synthetic session data and
+offline AI foundations. Lint is not configured. Dependency versions are pinned in
+`package.json` and `package-lock.json`; use `npm ci` to reproduce them.
+The PR/main Foundation CI job runs the same checks without browser tooling,
+credentials, AISFA, live AI or deployment. For telemetry settings, fresh-clone
+setup, optional independent browser checks, troubleshooting and CI logs, see
+[Local development and CI](docs/development/U00.09_Local_Development_and_CI.md).
 
 ## Shared synthetic data (U00.02)
 
@@ -94,7 +95,8 @@ browser commands and limitations.
 
 The server-only AI SDK adapter is an offline-testable foundation, not an enabled
 AI feature. There are no public AI endpoints; live OpenAI dispatch remains
-hard-blocked until U00.07 supplies budget/rate/concurrency authorization.
+hard-blocked pending all model, durable-store, budget, ingress and release gates
+in the U00.07 contract; the offline controls alone do not authorize live inference.
 No API key is needed to run `npm run check:ai-adapter`.
 See [the adapter contract](docs/contracts/U00.06_Server_AI_Adapter_Contract.md)
 and [validation results](U00.06_VALIDATION.md).

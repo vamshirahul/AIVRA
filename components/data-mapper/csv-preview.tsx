@@ -5,6 +5,7 @@ import { CSV_ERRORS, readCSVFile } from "../../lib/data-mapper/parse-csv";
 import type { CSVSide } from "../../lib/data-mapper/parse-csv";
 import { columnMappingReducer, initialMappingState } from "../../lib/data-mapper/column-mapping";
 import { ColumnMapping } from "./column-mapping";
+import { PublishApplications } from "./publish-applications";
 
 export function CSVPreview({ selected, currency }: { selected: CSVSide; currency: string }) {
   const [state, dispatch] = useReducer(columnMappingReducer, initialMappingState);
@@ -53,8 +54,9 @@ export function CSVPreview({ selected, currency }: { selected: CSVSide; currency
           {mapping && <ColumnMapping key={`${side}-${draft.generation}`} side={side} source={draft.preview} draft={mapping} currency={currency}
             onMap={(field, index) => dispatch({ type: "map", side, generation: draft.generation, field, index })}
             onConfirm={() => dispatch({ type: "confirm", side, generation: draft.generation, revision: mapping.revision })} />}
+          {mapping?.confirmed && <PublishApplications key={`${side}-${draft.generation}-${mapping.revision}`} side={side} source={draft} mapping={mapping} active={selected === side} />}
         </>}
-        <p className="csv-boundary">CSV and mapping drafts only. Not imported/published. Selecting a file or confirming mapping does not update the shared deal or run AI. Dataset publication belongs to U01.04.</p>
+        <p className="csv-boundary">Selecting a file or Confirm Mapping leaves the shared deal unchanged. Only the separate reviewed Publish to demo session action replaces this side. CSV/mapping drafts are not saved; published application values use the existing browser-tab session storage. No data is sent to a server or AI.</p>
       </section>;
     })}
   </div>;

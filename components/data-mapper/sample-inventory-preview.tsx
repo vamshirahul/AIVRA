@@ -24,8 +24,8 @@ export function SampleInventoryPreview() {
     <section className="inventory-preview" aria-label="Sample application inventories">
       <p className="badge">Sample inventory preview available</p>
       <h2 className="section-title">Buyer and Target applications</h2>
-      <p className="inventory-disclosure">Synthetic example data · Dataset {deal.dataset_version} · Read-only source preview</p>
-      <p className="inventory-boundary">Preview and map local CSV drafts below. Mapping confirmation is draft only; dataset publication is coming later. No import or AI analysis has been run.</p>
+      <p className="inventory-disclosure">Synthetic example data · Fixture dataset {deal.dataset_version} · Application source revision {session.input_revisions.applications} · Read-only source preview</p>
+      <p className="inventory-boundary">Preview and map local CSV drafts below. Confirm Mapping is draft only; a separate reviewed publication can replace the shared inventory. No AI analysis has been run.</p>
       <div className="inventory-tabs" role="tablist" aria-label="Application inventory side">
         {sides.map((side) => <button key={side} type="button" role="tab" id={`${id}-${side}-tab`} aria-controls={`${id}-${side}-panel`}
           aria-selected={selected === side} tabIndex={selected === side ? 0 : -1}

@@ -145,6 +145,16 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .mapping-confirm { margin-top: 16px; }
 .csv-preview .mapping-confirmed { color: var(--success); background: var(--success-surface); padding: 12px; }
 
+.publication { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); min-width: 0; }
+.publication-review { margin-top: 12px; }
+.publication-impact { margin-top: 14px; padding: 16px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.publication-impact h5 { font-weight: 650; }
+.publication-impact dl { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-top: 12px; font-size: 12px; }
+.publication-impact dd { font-weight: 650; }
+.publication-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.csv-preview .publication-block { color: var(--error); background: var(--error-surface); padding: 12px; }
+.csv-preview .publication-success { color: var(--success); background: var(--success-surface); padding: 12px; }
+
 @media (max-width: 1023px) {
   .workspace-header { flex-wrap: wrap; padding: 16px 20px; gap: 12px; }
   .brand { font-size: 18px; }

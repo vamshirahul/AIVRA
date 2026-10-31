@@ -1,4 +1,7 @@
-import { captureInputVersions, createDemoSession, getResultFreshness, parseSession, recordDerivedResultMetadata, serializeSession, SESSION_STORAGE_KEY, updateApplication, updateLicense, updateTSA } from "./session.ts";
+import { captureInputVersions, createDemoSession, getResultFreshness, parseSession, publishSessionApplications, recordDerivedResultMetadata, serializeSession, SESSION_STORAGE_KEY, updateApplication, updateLicense, updateTSA } from "./session.ts";
+import { PublicationFailure } from "../data-mapper/publish-applications.ts";
+import type { PublicationBlock, PublicationResult, PublicationToken } from "../data-mapper/publish-applications.ts";
+import type { Application } from "../contracts/demo.ts";
 import type { ApplicationPatch, CapturedVersions, DemoSession, InputDependency, LicensePatch, ResultKind, TSAPatch } from "./session.ts";
 
 export type SessionStorageAccess = () => Pick<Storage, "getItem" | "setItem" | "removeItem">;
@@ -69,6 +72,34 @@ export function createDemoSessionController(storage: SessionStorageAccess, clock
     updateApplication: (id: string, patch: ApplicationPatch) => apply((state) => updateApplication(state, id, patch, clock())),
     updateLicense: (id: string, patch: LicensePatch) => apply((state) => updateLicense(state, id, patch, clock())),
     updateTSA: (id: string, patch: TSAPatch) => apply((state) => updateTSA(state, id, patch, clock())),
+    publishApplications(side: Application["company_side"], applications: readonly Application[], expected: PublicationToken): PublicationResult {
+      let rejection: PublicationBlock | undefined;
+      let changed = false;
+      const operation = apply((state) => {
+        try {
+          // Check the live controller token before consulting persistence or constructing a replacement.
+          if (!expected || expected.session_id !== state.session_id || expected.session_revision !== state.session_revision) throw new PublicationFailure({ ok: false, code: "stale_session" });
+          if (snapshot.storageAvailable) {
+            let stored: string | null | undefined;
+            try { stored = storage().getItem(SESSION_STORAGE_KEY); } catch { /* Existing memory fallback; persist below reports actual write availability. */ }
+            if (stored !== undefined) {
+              try { if (stored === null || JSON.stringify(parseSession(stored)) !== JSON.stringify(state)) throw new Error("Stored session mismatch"); }
+              catch { throw new PublicationFailure({ ok: false, code: "invalid_storage" }); }
+            }
+          }
+          const next = publishSessionApplications(state, side, applications, expected, clock());
+          changed = next !== state;
+          return next;
+        } catch (error) {
+          rejection = error instanceof PublicationFailure ? error.block : { ok: false, code: "invalid_session" };
+          return state; // apply's identity path performs no persistence write or notification.
+        }
+      });
+      if (rejection) return rejection;
+      if (!operation.ok) return { ok: false, code: "invalid_session" };
+      const session = current();
+      return { ok: true, changed, source_revision: session.input_revisions.applications, session_id: session.session_id };
+    },
     captureInputVersions: (dependencies: readonly InputDependency[]) => captureInputVersions(current(), dependencies),
     recordDerivedResultMetadata: (kind: ResultKind, dependencies: readonly InputDependency[], captured: CapturedVersions) => apply((state) => recordDerivedResultMetadata(state, kind, dependencies, captured, clock())),
     getResultFreshness: (kind: ResultKind) => snapshot.session ? getResultFreshness(snapshot.session, kind) : "missing" as const,

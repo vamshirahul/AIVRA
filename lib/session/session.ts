@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { ApplicationSchema, LicensePositionSchema, SyntheticDealFixtureSchema, TSAServiceSchema } from "../contracts/demo.ts";
 import { loadSyntheticDealFixture } from "../fixtures/synthetic-deal.ts";
+import { prepareApplicationPublication, PublicationFailure } from "../data-mapper/publish-applications.ts";
+import type { PublicationToken } from "../data-mapper/publish-applications.ts";
+import type { Application } from "../contracts/demo.ts";
 
 export const SESSION_SCHEMA_VERSION = "1.0.0" as const;
 export const SESSION_STORAGE_KEY = "aivra:r0:demo-session:v1";
@@ -108,6 +111,18 @@ export function getResultFreshness(session: DemoSession, kind: ResultKind): Fres
 
 function nextTime(session: DemoSession, now: string) {
   return Date.parse(now) > Date.parse(session.modified_at) ? now : session.modified_at;
+}
+
+/** Atomic caller must serialize this result before committing; fixture versions stay fixed. */
+export function publishSessionApplications(session: DemoSession, side: Application["company_side"], applications: readonly Application[], expected: PublicationToken, now = new Date().toISOString()): DemoSession {
+  if (!expected || expected.session_id !== session.session_id || expected.session_revision !== session.session_revision) throw new PublicationFailure({ ok: false, code: "stale_session" });
+  DemoSessionSchema.parse(session);
+  const proposed = prepareApplicationPublication(session.current_deal, side, applications);
+  if (!proposed.ok) throw new PublicationFailure(proposed);
+  if (proposed.no_op) return session;
+  return DemoSessionSchema.parse({ ...session, current_deal: proposed.deal, modified_at: nextTime(session, now),
+    session_revision: session.session_revision + 1,
+    input_revisions: { ...session.input_revisions, applications: session.input_revisions.applications + 1 } });
 }
 
 export function recordDerivedResultMetadata(session: DemoSession, kind: ResultKind, dependencies: readonly InputDependency[], captured_versions: CapturedVersions, now = new Date().toISOString()): DemoSession {

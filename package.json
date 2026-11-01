@@ -16,7 +16,8 @@
     "check:column-mapping": "node scripts/check-column-mapping.mts",
     "check:publish-applications": "node scripts/check-publish-applications.mts",
     "check:ala-contract": "node --conditions=react-server scripts/check-ala-contract.mts",
-    "check:ci": "npm run validate:fixture && node scripts/check-demo-session.mts && npm run check:ai-adapter && npm run check:ai-controls && npm run check:ai-ui && npm run check:data-mapper && npm run check:csv-preview && npm run check:column-mapping && npm run check:publish-applications && npm run check:ala-contract && npm run typecheck && npm run build"
+    "check:ala-action": "node --conditions=react-server scripts/check-ala-action.mts",
+    "check:ci": "npm run validate:fixture && node scripts/check-demo-session.mts && npm run check:ai-adapter && npm run check:ai-controls && npm run check:ai-ui && npm run check:data-mapper && npm run check:csv-preview && npm run check:column-mapping && npm run check:publish-applications && npm run check:ala-contract && npm run check:ala-action && npm run typecheck && npm run build"
   },
   "engines": {
     "node": ">=24.22.1 <25",

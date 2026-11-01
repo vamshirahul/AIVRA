@@ -219,7 +219,7 @@ try {
     const success = await createAIRouter({ policy: f.p, execution: "offline-test", store: redis, paid: f.paid, fallback: f.fallback, clock: f.clock })(input, contract, caller()); assert.ok(success.ok); assert.equal(success.result.mode, "paid"); assert.equal(success.result.routing_reason, undefined); assert.equal((await status(f)).paid.accounted_units, 35);
     for (const text of [...wire, JSON.stringify(await status(f))]) for (const forbidden of [canary, fakeKey, rawAddress, deal.applications[0].app_name]) assert.ok(!text.includes(forbidden));
   });
-  await check("protected import graph contains no public bypass, API route, server action or fake-store import", async () => {
+  await check("protected import graph permits only inert ALA route; no bypass, server action or fake-store import", async () => {
     for (const directory of ["app", "components", "lib"]) for (const file of await readdir(directory, { recursive: true })) {
       if (!/\.(ts|tsx|js|mjs)$/.test(file)) continue;
       const name = `${directory}/${file}`.replaceAll("\\", "/"); const source = await readFile(name, "utf8");
@@ -232,7 +232,11 @@ try {
       }
       if (directory !== "lib") assert.doesNotMatch(source, /server\/ai|OPENAI_API_KEY/);
     }
-    assert.ok(!(await readdir("app", { recursive: true })).some((file) => /(^|[\\/])api([\\/]|$)/.test(file)));
+    const api = (await readdir("app", { recursive: true })).map((file) => file.replaceAll("\\", "/")).filter((file) => /^api(?:\/|$)/.test(file)).sort();
+    assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts"]);
+    const route = await readFile("app/api/ai/ala/route.ts", "utf8");
+    assert.match(route, /export function POST\(\)/); assert.match(route, /status: 503/);
+    assert.doesNotMatch(route, /\bimport\s|process\.env|createAI|fake-usage|\b(?:request|req)\.(?:json|text|arrayBuffer|body)/);
   });
   assert.equal(networkAttempts, 0);
   assert.ok(logs.every((line) => ![canary, fakeKey, rawAddress].some((value) => line.includes(value))));

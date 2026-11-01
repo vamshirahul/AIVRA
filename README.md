@@ -147,6 +147,19 @@ Run `npm run check:ala-action` (also in `check:ci`). See the
 [response contract](docs/contracts/U02.02_ALA_Analyze_Response_Contract.md) and
 [validation](U02.02_VALIDATION.md). Live activation gates remain outstanding.
 
+## Read-only rationalization results (U02.03 — in review)
+
+A read-only presenter supports validated ALA findings/actions, exact Buyer/Target
+IDs, captured evidence, rationales, qualitative uncertainty, coverage and provenance.
+Its server boundary rechecks coverage and captured/current source digests; invalid
+or outdated input yields no rows. Fabricated results exist only in offline tests.
+The public page shows **No AI analysis has been run** and the existing readiness
+action still returns 503; populated live result delivery remains blocked integration.
+No review edits, result storage, export or recommendation rules are implemented.
+Run `npm run check:ala-grid` (also in `check:ci`). See the
+[grid contract](docs/contracts/U02.03_ALA_Results_Grid_Contract.md) and
+[validation](U02.03_VALIDATION.md) for tests, limitations and activation gates.
+
 ## AI budget and fallback foundation (U00.07 — in review)
 
 The internal router now supports independently capped paid/fallback paths,

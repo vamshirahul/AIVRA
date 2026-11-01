@@ -156,7 +156,8 @@ or outdated input yields no rows. Fabricated results exist only in offline tests
 The public page shows **No AI analysis has been run** and the existing readiness
 action still returns 503; populated live result delivery remains blocked integration.
 The original presenter stays read-only; temporary visitor overrides use the separate
-layer below. Result storage, export and recommendation rules are not implemented.
+layer below. Result storage and recommendation rules are not implemented; explicit
+reviewed exports are described below.
 Run `npm run check:ala-grid` (also in `check:ci`). See the
 [grid contract](docs/contracts/U02.03_ALA_Results_Grid_Contract.md) and
 [validation](U02.03_VALIDATION.md) for tests, limitations and activation gates.
@@ -173,6 +174,21 @@ or review controls, no simulated analysis, and no live AI activation.
 Run `npm run check:ala-review` (also in `check:ci`). See the
 [review contract](docs/contracts/U02.04_ALA_Review_Overrides_Contract.md) and
 [validation](U02.04_VALIDATION.md) for exact validation and pending integration/UAT.
+
+## Reviewed results export (U02.05 — in review)
+
+For a genuine trusted current/incomplete result, the review workspace can explicitly
+download the latest saved local review draft as **JSON or CSV**. JSON is the lossless
+`ala/review-export/v1` contract; CSV is a table view with provenance, coverage and
+spreadsheet formula protection. Both preserve original AI recommendations separately
+from effective visitor proposals and remain unapproved. Derived files are bounded to
+1,000,000 UTF-8 bytes; oversized output fails without truncation.
+The strict future-consumer reader retains original evidence/rationale/provenance and
+incomplete status while exposing effective actions. No downstream module is wired.
+The public page still has no trusted result to export and shows no download buttons.
+Run `npm run check:ala-export` (also in `check:ci`). See the
+[export contract](docs/contracts/U02.05_ALA_Reviewed_Export_Contract.md) and
+[validation](U02.05_VALIDATION.md) for field/version semantics, CSV limitations and gates.
 
 ## AI budget and fallback foundation (U00.07 — in review)
 

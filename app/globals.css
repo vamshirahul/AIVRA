@@ -155,6 +155,13 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .csv-preview .publication-block { color: var(--error); background: var(--error-surface); padding: 12px; }
 .csv-preview .publication-success { color: var(--success); background: var(--success-surface); padding: 12px; }
 
+.ala-action { margin-top: 28px; padding: 22px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); min-width: 0; }
+.ala-action > p { margin-top: 12px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.ala-source-summary { display: flex; flex-wrap: wrap; gap: 16px 28px; margin-block: 18px; font-size: 12px; }
+.ala-source-summary dd { font-size: 20px; font-weight: 650; }
+.ala-analyze-button { margin-top: 16px; }
+.ala-action .ala-checking { color: var(--accent); background: var(--accent-soft); padding: 12px; border-radius: 6px; }
+
 @media (max-width: 1023px) {
   .workspace-header { flex-wrap: wrap; padding: 16px 20px; gap: 12px; }
   .brand { font-size: 18px; }

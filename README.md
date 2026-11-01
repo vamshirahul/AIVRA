@@ -121,6 +121,16 @@ No API key is needed to run `npm run check:ai-adapter`.
 See [the adapter contract](docs/contracts/U00.06_Server_AI_Adapter_Contract.md)
 and [validation results](U00.06_VALIDATION.md).
 
+## Application Rationalization contract (U02.01 — in review)
+
+The server-only `ala/v1` contract builds requests from the current shared session,
+validates structured multi-application findings/action destinations and checks
+application references, sides and coverage. All overlap/disposition decisions remain
+LLM-owned. No Analyze UI, endpoint, model call or result storage is implemented.
+Run `npm run check:ala-contract` for synthetic offline contract/adapter tests
+(also in `check:ci`). See [the ALA contract](docs/contracts/U02.01_ALA_LLM_Contract.md)
+and [U02.01 validation](U02.01_VALIDATION.md), including current output-cap limits.
+
 ## AI budget and fallback foundation (U00.07 — in review)
 
 The internal router now supports independently capped paid/fallback paths,

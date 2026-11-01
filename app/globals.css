@@ -178,6 +178,22 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .ala-results-table th, .ala-results-table td { padding: 12px; border: 1px solid var(--border); vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ala-results-table thead { background: var(--background); }
 
+.ala-review { min-width: 0; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; overflow-wrap: anywhere; }
+.ala-review p { margin-top: 8px; white-space: pre-wrap; }
+.ala-review h3, .ala-review h4, .ala-review legend { font-weight: 650; }
+.ala-review-row { margin-top: 18px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); min-width: 0; }
+.ala-review-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 16px; margin-block: 12px; }
+.ala-review-comparison > section { min-width: 0; }
+.ala-review-form { margin-top: 12px; }
+.ala-review-form fieldset { min-width: 0; }
+.ala-review-form label { display: block; font-weight: 650; margin-top: 12px; margin-bottom: 6px; }
+.ala-review-form select, .ala-review-form textarea { display: block; width: 100%; max-width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--muted); border-radius: 6px; color: var(--foreground); background: var(--surface); font: inherit; }
+.ala-review-form textarea { resize: vertical; }
+.ala-review-form :is(select, textarea):focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.ala-review-form [aria-invalid="true"] { border-color: var(--error); }
+.ala-review .ala-review-error { color: var(--error); background: var(--error-surface); padding: 10px; }
+.ala-review-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+
 @media (max-width: 1023px) {
   .workspace-header { flex-wrap: wrap; padding: 16px 20px; gap: 12px; }
   .brand { font-size: 18px; }

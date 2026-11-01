@@ -162,7 +162,7 @@ try {
     let reads = 0; const hostile = new Proxy({}, { get() { reads++; throw Error("body read"); } });
     const response = (POST as (...args: unknown[]) => Response)(hostile); assert.equal(response.status, 503); assert.equal(response.headers.get("Cache-Control"), "no-store"); assert.equal(reads, 0);
     assert.equal((await response.json()).error.code, "ai_controls_not_ready");
-    const action = await readFile("components/ala/analyze-applications.tsx", "utf8"); assert.match(action, /ALAResultsGrid view=\{\{ state: "absent" \}\}/);
+    const action = await readFile("components/ala/analyze-applications.tsx", "utf8"); assert.match(action, /ALAReviewWorkspace view=\{\{ state: "absent" \}\}/);
     assert.doesNotMatch(action, /body:|JSON\.stringify|projectALAResults|server\/ala|status: "current"|mock|fixture/);
     const api = (await readdir("app", { recursive: true })).map((s) => s.replaceAll("\\", "/")).filter((s) => /^api(?:\/|$)/.test(s)).sort();
     assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts"]);

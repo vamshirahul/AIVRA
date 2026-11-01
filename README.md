@@ -47,8 +47,9 @@ for field definitions, versions, null handling, and future module import paths.
 The current UI uses the founder-approved **A1 Coastal Navy** theme (ADR-011).
 Home shows counts from the shared fictional session. Data Mapper now offers a
 read-only Buyer/Target application inventory preview; Application Rationalization
-has a readiness-only Analyze action, and the other seven business pages remain
-introductions. Live AI remains disabled.
+has a readiness-only Analyze action, License Optimizer shows the shared read-only
+license inventory, and the other six business pages remain introductions. Live AI
+remains disabled.
 
 | Group | Page | Route |
 | --- | --- | --- |
@@ -92,6 +93,21 @@ See the [inventory contract](docs/contracts/U01.01_Sample_Inventory_View_Contrac
 [mapping contract](docs/contracts/U01.03_Column_Mapping_Validation_Contract.md) and
 [publication contract](docs/contracts/U01.04_Published_Session_Dataset_Contract.md) and
 [U01.04 validation](U01.04_VALIDATION.md).
+
+## Read-only license inventory (U05.01 — in review)
+
+License Optimizer displays current shared license positions from both Buyer and
+Target, joined by exact application ID to the current application name/side. The
+table shows source IDs, vendor/product, entitled quantity, estimated usage, annual
+license spend in the deal currency, renewal date and full notes. Zero is known zero;
+null/missing values say Unknown. All quantities and amounts are fictional, not
+contract evidence or verified entitlements. No AI license analysis has run.
+The view follows existing shared session edits, refresh/navigation and Reset; it
+adds no editing, selection, analysis, optimization, export or cost-synergy behavior.
+Run `npm run check:license-inventory` (also in `check:ci`). See the
+[license view contract](docs/contracts/U05.01_License_Inventory_View_Contract.md) and
+[validation](U05.01_VALIDATION.md). U05.02 owns future AI findings; U05.04 remains
+blocked until U03.01.
 
 ## Browser demo session (U00.05)
 
@@ -204,8 +220,8 @@ and [U00.07 validation](U00.07_VALIDATION.md) for remaining activation gates.
 
 ## Shared AI feedback (U00.08 — in review)
 
-Three AI-intended introductions show static “AI not enabled”; Application
-Rationalization now has the readiness-only action above. A reusable read-only
+License Optimizer, Playbook Generator and AI Assistant retain static “AI not enabled”;
+Application Rationalization has the readiness-only action above. A reusable read-only
 notice supports loading, validated paid/fallback provenance, safe errors and
 owner-supplied stale status for future modules. No live inference is enabled.
 Run `npm run check:ai-ui` for offline presentation checks. See the

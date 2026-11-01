@@ -16,7 +16,7 @@ const deal = initial.current_deal;
 const rows = (side: "buyer" | "target") => inventoryForSide(controller.getSnapshot().session!.current_deal.applications, side);
 const display = (side: "buyer" | "target") => rows(side).map((app) => INVENTORY_COLUMNS.map(([field]) => inventoryValue(app, field, deal.currency)));
 
-if (!process.argv.includes("--browser") && !process.argv.includes("--csv-browser") && !process.argv.includes("--mapping-browser") && !process.argv.includes("--publish-browser") && !process.argv.includes("--ala-browser")) {
+if (!process.argv.includes("--browser") && !process.argv.includes("--csv-browser") && !process.argv.includes("--mapping-browser") && !process.argv.includes("--publish-browser") && !process.argv.includes("--ala-browser") && !process.argv.includes("--license-browser")) {
   const fetchBefore = globalThis.fetch; let attempts = 0;
   globalThis.fetch = async () => { attempts++; throw new Error("Inventory checks forbid network"); };
   try {
@@ -109,7 +109,10 @@ if (!process.argv.includes("--browser") && !process.argv.includes("--csv-browser
     async function key(name: string, code: number) { for (const type of ["keyDown", "keyUp"]) await page("Input.dispatchKeyEvent", { type, key: name, code: name, windowsVirtualKeyCode: code }); }
     await page("Page.enable"); await page("Runtime.enable"); await page("Fetch.enable", { patterns: [{ urlPattern: "*" }] });
     await navigate("/data-mapper"); await until("!!document.querySelector('[role=tab]')");
-    if (process.argv.includes("--ala-browser")) {
+    if (process.argv.includes("--license-browser")) {
+      const { checkLicenseInventoryBrowser } = await import("./check-license-inventory.mts");
+      await checkLicenseInventoryBrowser({ page, evaluate, until, navigate, key, base });
+    } else if (process.argv.includes("--ala-browser")) {
       const { checkALAActionBrowser } = await import("./check-ala-action.mts");
       await checkALAActionBrowser({ page, evaluate, until, navigate, key, base });
     } else if (process.argv.includes("--publish-browser")) {
@@ -161,10 +164,10 @@ if (!process.argv.includes("--browser") && !process.argv.includes("--csv-browser
     await until("!!document.querySelector('tbody') && !document.querySelector('tbody').textContent.includes('Edited synthetic app')");
     assert.deepEqual(await evaluate(`JSON.parse(sessionStorage.getItem(${JSON.stringify(SESSION_STORAGE_KEY)})).current_deal`), deal);
     const routes = ["/", "/integration-health", "/data-mapper", "/application-rationalization", "/license-optimizer", "/cost-synergy", "/scenario-modeling", "/playbook-generator", "/tsa-tracker", "/ai-assistant"];
-    for (const route of routes) { const response = await fetch(`${base}${route}`); assert.equal(response.status, 200); if (route === "/application-rationalization") assert.match(await response.text(), /Live AI is not enabled/); else if (route !== "/" && route !== "/data-mapper") assert.match(await response.text(), /Not yet implemented/); }
+    for (const route of routes) { const response = await fetch(`${base}${route}`); assert.equal(response.status, 200); if (route === "/application-rationalization") assert.match(await response.text(), /Live AI is not enabled/); else if (route === "/license-optimizer") assert.match(await response.text(), /AI not enabled/); else if (route !== "/" && route !== "/data-mapper") assert.match(await response.text(), /Not yet implemented/); }
     }
     assert.deepEqual(errors, []); assert.equal(external, 0);
-    if (!process.argv.includes("--csv-browser") && !process.argv.includes("--mapping-browser") && !process.argv.includes("--publish-browser") && !process.argv.includes("--ala-browser")) console.log("PASS: actual Chromium at 1440/390/320px; both inventories/all cells, tab keyboard/focus/wrap, scroll containment, unchanged storage/revisions/metadata, edited reload/navigation, escaped notes, global reset, ten routes/inert gallery; zero external requests or runtime errors");
+    if (!process.argv.includes("--csv-browser") && !process.argv.includes("--mapping-browser") && !process.argv.includes("--publish-browser") && !process.argv.includes("--ala-browser") && !process.argv.includes("--license-browser")) console.log("PASS: actual Chromium at 1440/390/320px; both inventories/all cells, tab keyboard/focus/wrap, scroll containment, unchanged storage/revisions/metadata, edited reload/navigation, escaped notes, global reset, ten routes/inert gallery; zero external requests or runtime errors");
     else console.log("PASS: shared browser harness observed zero external page requests or runtime errors");
   } finally { socket?.close(); browser.kill(); }
 }

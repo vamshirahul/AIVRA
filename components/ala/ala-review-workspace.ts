@@ -6,6 +6,8 @@ import type { ALAResultsView } from "../../lib/ala/results-view.ts";
 import { createReviewDraft, effectiveReviewActions, MAX_REVIEW_REASON, restoreAIRecommendation, REVIEW_DISPOSITIONS, reviewActionKey, reviewIdentity, reviewResultKey, saveReviewOverride } from "../../lib/ala/review-overrides.ts";
 import type { ReviewActionReference, ReviewDisplayAction, ReviewEdit, ReviewErrors, ReviewOperation } from "../../lib/ala/review-overrides.ts";
 import { ALAResultsGrid } from "./ala-results-grid.ts";
+import { downloadReviewedResults } from "../../lib/ala/review-export.ts";
+import type { ExportFormat } from "../../lib/ala/review-export.ts";
 
 const destinationText = (destination: ReviewDisplayAction["effective"]["destination"]) => destination ? `${destination.side === "buyer" ? "Buyer" : "Target"} ${destination.app_id}` : "None / Not applicable";
 const targetKey = (destination: ReviewDisplayAction["effective"]["destination"]) => destination ? JSON.stringify([destination.app_id, destination.side]) : "";
@@ -87,6 +89,7 @@ function ResultReview({ view }: { view: ALAResultsView }) {
   const [draft, setDraft] = useState(() => createReviewDraft(view)!);
   const latest = useRef(draft); // Synchronous updates prevent rapid edits to different rows losing a save.
   const [message, setMessage] = useState("");
+  const [exportError, setExportError] = useState("");
   const entries = effectiveReviewActions(view, draft), changed = draft.overrides.length;
   function commit(result: ReviewOperation, restored = false): ReviewOperation {
     if (result.ok) {
@@ -95,11 +98,20 @@ function ResultReview({ view }: { view: ALAResultsView }) {
     }
     return result;
   }
+  function download(format: ExportFormat) {
+    const result = downloadReviewedResults(view, latest.current, format);
+    setExportError(result.ok ? "" : result.message);
+    setMessage(result.ok ? "Download initiated for the current unapproved review draft. Check your browser; file saving is not confirmed." : "");
+  }
   return h("div", null, h(ALAResultsGrid, { view }), h("section", { className: "ala-review", "aria-label": "Visitor recommendation review" },
     h("h2", { className: "section-title" }, "Review recommendations"),
-    h("p", null, "These are temporary visitor drafts of unapproved AI suggestions, not human approvals. They are not saved durably or exported and are lost on refresh, navigation or a changed analysis. The original AI results remain unchanged above."),
+    h("p", null, "These are temporary visitor drafts of unapproved AI suggestions, not human approvals. They are not saved durably and are lost on refresh, navigation or a changed analysis. Explicit downloads reflect only the current saved local draft; unsaved form edits are excluded. The original AI results remain unchanged above."),
     h("p", null, `Original AI actions not changed: ${entries.length - changed}. Visitor overrides: ${changed}.`),
     h("p", { role: "status", "aria-live": "polite", "aria-atomic": true }, message),
+    h("div", { className: "ala-review-buttons" },
+      h("button", { type: "button", className: "button button-secondary", onClick: () => download("json") }, "Download reviewed results (JSON)"),
+      h("button", { type: "button", className: "button button-secondary", onClick: () => download("csv") }, "Download reviewed results (CSV)")),
+    exportError && h("p", { role: "alert", className: "ala-review-error" }, exportError),
     ...entries.map((entry) => h(ReviewActionRow, { key: reviewActionKey(entry.finding_id, entry.original.action_id), view, entry,
       onSave: (edit) => commit(saveReviewOverride(view, latest.current, edit)), onRestore: (reference) => commit(restoreAIRecommendation(view, latest.current, reference), true) }))));
 }

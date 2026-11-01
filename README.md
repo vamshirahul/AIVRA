@@ -106,8 +106,8 @@ The view follows existing shared session edits, refresh/navigation and Reset; it
 adds no editing, selection, analysis, optimization, export or cost-synergy behavior.
 Run `npm run check:license-inventory` (also in `check:ci`). See the
 [license view contract](docs/contracts/U05.01_License_Inventory_View_Contract.md) and
-[validation](U05.01_VALIDATION.md). U05.02 owns future AI findings; U05.04 remains
-blocked until U03.01.
+[validation](U05.01_VALIDATION.md). Server-only findings and the advisory CSE
+handoff are described below; public license analysis remains disabled.
 
 ## License LLM findings foundation (U05.02 — in review)
 
@@ -137,7 +137,8 @@ there is no trusted populated-result delivery or live AI path yet.
 Run `npm run check:license-review` (also in `check:ci`). See the
 [review contract](docs/contracts/U05.03_License_Review_Selection_Contract.md) and
 [validation](U05.03_VALIDATION.md) for state/identity rules, SSR versus public-browser
-evidence, and remaining live-delivery/quality gates. U05.04 still awaits U03.01.
+evidence, and remaining live-delivery/quality gates. Numeric license aggregation
+remains gated separately.
 
 ## Cost Synergy calculation foundation (U03.01 — in review)
 
@@ -148,8 +149,24 @@ net benefit. It uses exact integer CAD cents, preserves unknowns and original AI
 recommendations, and withholds overlapping whole-application spend claims.
 Run `npm run check:cse-calculation` (also in `check:ci`); see
 [U03.01 validation](U03.01_VALIDATION.md). The public CSE screen remains an
-introduction. Editable UI, exports and selected-license handoff are later units;
-reserved license contributions are disabled pending U05.04 contract reconciliation.
+introduction. Editable UI and exports remain later units; selected-license advisory
+data uses the separate handoff below. Numeric license contributions remain disabled.
+
+## Selected license advisory handoff (U05.04 — in review)
+
+`licenses/cse-handoff/v1` carries only explicitly selected provisional findings,
+unchanged original AI content, the separate visitor selection snapshot, exact
+source cost evidence and application spend ownership. Optional current CSE ALA
+claims can be compared through the existing whole-spend guard. Repeated license
+or application ownership remains visible and withheld; no savings are inferred,
+summed or inserted into `cse/calculation/v1`. Unknown and zero remain distinct.
+The current-source consumer gate rechecks result/review/source and comparison;
+the structural reader alone is not authentication or freshness verification.
+No public result delivery, UI, API, export or storage is added. Run
+`npm run check:license-cse-handoff` (also in `check:ci`). See the
+[handoff contract](docs/contracts/U05.04_License_CSE_Handoff_Contract.md) and
+[validation](U05.04_VALIDATION.md). Financial assumptions/allocation and enabling
+license aggregation require separate approval; existing CSE arithmetic is unchanged.
 
 ## Browser demo session (U00.05)
 

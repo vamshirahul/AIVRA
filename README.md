@@ -139,6 +139,18 @@ Run `npm run check:license-review` (also in `check:ci`). See the
 [validation](U05.03_VALIDATION.md) for state/identity rules, SSR versus public-browser
 evidence, and remaining live-delivery/quality gates. U05.04 still awaits U03.01.
 
+## Cost Synergy calculation foundation (U03.01 — in review)
+
+The separate [Cost Synergy calculation contract](docs/contracts/U03.01_CSE_Calculation_Contract.md)
+provides `cse/calculation/v1` pure arithmetic from explicit included assumptions:
+annual savings, once-only migration/transition costs and an undiscounted whole-year
+net benefit. It uses exact integer CAD cents, preserves unknowns and original AI
+recommendations, and withholds overlapping whole-application spend claims.
+Run `npm run check:cse-calculation` (also in `check:ci`); see
+[U03.01 validation](U03.01_VALIDATION.md). The public CSE screen remains an
+introduction. Editable UI, exports and selected-license handoff are later units;
+reserved license contributions are disabled pending U05.04 contract reconciliation.
+
 ## Browser demo session (U00.05)
 
 The current synthetic deal is shared across routes and saved in this tab's

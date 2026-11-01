@@ -109,6 +109,20 @@ Run `npm run check:license-inventory` (also in `check:ci`). See the
 [validation](U05.01_VALIDATION.md). U05.02 owns future AI findings; U05.04 remains
 blocked until U03.01.
 
+## License LLM findings foundation (U05.02 — in review)
+
+The server-only `licenses/v1` contract builds a frozen request from the current
+shared session and validates model-authored findings, exact license/app joins,
+evidence pointers, coverage, provenance and source freshness. The guarded router
+is exercised only with fabricated offline test providers/store. No local license
+recommendation or savings rules, public inference endpoint, result display,
+review/selection or cost-synergy integration is added. The inventory still says
+**No AI license analysis has run** and live AI stays disabled.
+Run `npm run check:license-findings` (also in `check:ci`). See the
+[license LLM contract](docs/contracts/U05.02_License_LLM_Findings_Contract.md) and
+[validation](U05.02_VALIDATION.md), including the unverified 200-license narrative
+capacity at the unchanged 2,048-token output cap and remaining activation gates.
+
 ## Browser demo session (U00.05)
 
 The current synthetic deal is shared across routes and saved in this tab's

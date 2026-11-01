@@ -123,6 +123,22 @@ Run `npm run check:license-findings` (also in `check:ci`). See the
 [validation](U05.02_VALIDATION.md), including the unverified 200-license narrative
 capacity at the unchanged 2,048-token output cap and remaining activation gates.
 
+## Provisional license review (U05.03 — in review)
+
+A server-only projection revalidates license findings, captured evidence,
+coverage, provenance and current source identity before temporary visitor review.
+The isolated review component supports **Selected for further review — unapproved**,
+**Not selected**, and **Clear selection / restore unreviewed**. Choices live only
+in mounted component memory, separately from unchanged original AI findings.
+Shared license references and overlapping selections remain explicit; no financial
+totals, automatic conflict resolution, exports or CSE integration are provided.
+The public page continues to show only the real inventory and AI-disabled notice:
+there is no trusted populated-result delivery or live AI path yet.
+Run `npm run check:license-review` (also in `check:ci`). See the
+[review contract](docs/contracts/U05.03_License_Review_Selection_Contract.md) and
+[validation](U05.03_VALIDATION.md) for state/identity rules, SSR versus public-browser
+evidence, and remaining live-delivery/quality gates. U05.04 still awaits U03.01.
+
 ## Browser demo session (U00.05)
 
 The current synthetic deal is shared across routes and saved in this tab's

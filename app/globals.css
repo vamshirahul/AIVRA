@@ -197,6 +197,17 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .ala-review .ala-review-error { color: var(--error); background: var(--error-surface); padding: 10px; }
 .ala-review-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 
+.license-review { margin-top: 24px; min-width: 0; max-width: 100%; font-size: 12px; overflow-wrap: anywhere; }
+.license-review p, .license-review ul { margin-top: 10px; white-space: pre-wrap; }
+.license-review ul { list-style: disc; padding-inline-start: 20px; }
+.license-review h3, .license-review h4, .license-review legend { margin-top: 12px; font-weight: 650; }
+.license-review-provenance, .license-review-finding { margin-top: 16px; padding: 16px; min-width: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.license-review-warning { padding: 12px; color: var(--warning); background: var(--warning-surface); border-inline-start: 3px solid var(--warning); }
+.license-review fieldset { min-width: 0; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.license-selection-status { font-weight: 650; }
+.license-review-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.license-review-buttons .button { max-width: 100%; white-space: normal; text-align: start; }
+
 @media (max-width: 1023px) {
   .workspace-header { flex-wrap: wrap; padding: 16px 20px; gap: 12px; }
   .brand { font-size: 18px; }

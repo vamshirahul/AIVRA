@@ -162,6 +162,22 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .ala-analyze-button { margin-top: 16px; }
 .ala-action .ala-checking { color: var(--accent); background: var(--accent-soft); padding: 12px; border-radius: 6px; }
 
+.ala-results { min-width: 0; max-width: 100%; margin-top: 24px; font-size: 12px; overflow-wrap: anywhere; }
+.ala-results p { margin-top: 8px; white-space: pre-wrap; }
+.ala-results ul { padding-inline-start: 18px; list-style: disc; }
+.ala-grid-summary { display: flex; flex-wrap: wrap; gap: 12px 24px; margin-block: 16px; }
+.ala-grid-summary dd, .ala-results dt, .ala-results summary { font-weight: 650; }
+.ala-results summary { cursor: pointer; }
+.ala-results summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.ala-coverage-warning { padding: 12px; border-inline-start: 3px solid var(--warning); background: var(--warning-surface); color: var(--warning); }
+.ala-provenance { margin-block: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; }
+.ala-provenance dl > div { margin-top: 8px; }
+.ala-results-scroll { max-width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; }
+.ala-results-table { width: 100%; min-width: 1200px; table-layout: fixed; border-collapse: collapse; text-align: start; background: var(--surface); }
+.ala-results-table caption { padding: 12px; text-align: start; color: var(--muted); }
+.ala-results-table th, .ala-results-table td { padding: 12px; border: 1px solid var(--border); vertical-align: top; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ala-results-table thead { background: var(--background); }
+
 @media (max-width: 1023px) {
   .workspace-header { flex-wrap: wrap; padding: 16px 20px; gap: 12px; }
   .brand { font-size: 18px; }

@@ -6,6 +6,7 @@ import { useDemoSession } from "../demo-session-provider";
 import { AIStatusNotice } from "../ai/ai-status-notice";
 import { AI_ERROR_COPY } from "../../lib/ai/ai-view-state";
 import type { AIViewState } from "../../lib/ai/ai-view-state";
+import { ALAResultsGrid } from "./ala-results-grid";
 
 type SafeCode = keyof typeof AI_ERROR_COPY;
 const ErrorReply = z.strictObject({ status: z.literal("error"), error: z.strictObject({
@@ -48,8 +49,9 @@ export function AnalyzeApplications() {
       <div><dt>Target applications</dt><dd>{session ? session.current_deal.applications.filter((app) => app.company_side === "target").length : "—"}</dd></div>
       <div><dt>Application source revision</dt><dd>{session?.input_revisions.applications ?? "—"}</dd></div>
     </dl>
-    <p id="ala-readiness-guidance">Live AI is not enabled. This action currently checks readiness only: no application data is sent and AI does not run. Findings and review tools are not yet implemented.</p>
+    <p id="ala-readiness-guidance">Live AI is not enabled. This action currently checks readiness only: no application data is sent and AI does not run. No analysis has been run. Review tools are not yet implemented.</p>
     <button type="button" className="button button-primary ala-analyze-button" aria-describedby="ala-readiness-guidance" disabled={!ready || !session || view.status === "checking"} onClick={() => { void analyze(); }}>Analyze applications</button>
     {view.status === "checking" ? <p className="ala-checking" role="status" aria-live="polite">Checking AI readiness... The availability request is pending; repeat clicks are disabled.</p> : <AIStatusNotice state={view} />}
+    <ALAResultsGrid view={{ state: "absent" }} />
   </section>;
 }

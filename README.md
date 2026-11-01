@@ -155,10 +155,24 @@ Its server boundary rechecks coverage and captured/current source digests; inval
 or outdated input yields no rows. Fabricated results exist only in offline tests.
 The public page shows **No AI analysis has been run** and the existing readiness
 action still returns 503; populated live result delivery remains blocked integration.
-No review edits, result storage, export or recommendation rules are implemented.
+The original presenter stays read-only; temporary visitor overrides use the separate
+layer below. Result storage, export and recommendation rules are not implemented.
 Run `npm run check:ala-grid` (also in `check:ci`). See the
 [grid contract](docs/contracts/U02.03_ALA_Results_Grid_Contract.md) and
 [validation](U02.03_VALIDATION.md) for tests, limitations and activation gates.
+
+## Temporary recommendation review (U02.04 — in review)
+
+The isolated review workspace supports visitor disposition/destination overrides,
+nonblank change justification, Cancel and Restore AI suggestion for a trusted
+current/incomplete result. Original AI actions, evidence and provenance stay intact;
+visitor changes are explicitly unapproved drafts. Overrides live only in mounted
+component memory and disappear on refresh/navigation or result invalidation.
+The public page still receives only an absent result: no populated recommendations
+or review controls, no simulated analysis, and no live AI activation.
+Run `npm run check:ala-review` (also in `check:ci`). See the
+[review contract](docs/contracts/U02.04_ALA_Review_Overrides_Contract.md) and
+[validation](U02.04_VALIDATION.md) for exact validation and pending integration/UAT.
 
 ## AI budget and fallback foundation (U00.07 — in review)
 

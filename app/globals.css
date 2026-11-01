@@ -122,6 +122,9 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .inventory-table thead { background: var(--background); }
 .inventory-table th { font-weight: 650; }
 .inventory-table td:last-child { min-width: 240px; }
+.license-inventory-table { min-width: 1400px; }
+.license-inventory-table th, .license-inventory-table td { white-space: pre-wrap; }
+.license-inventory-table td:nth-child(2) { min-width: 220px; }
 .inventory-loading, .inventory-empty { padding: 20px 0; color: var(--muted); }
 
 .csv-preview { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); min-width: 0; }

@@ -119,7 +119,9 @@ if (process.argv.includes("--browser")) {
         const notice = page.locator(".ai-notice");
         assert.equal(await notice.count(), 1); assert.match(await notice.innerText(), /AI not enabled/);
         assert.equal(await notice.locator("button,a,[tabindex],[role=status],[role=alert]").count(), 0);
-        assert.equal(await page.getByText("Not yet implemented", { exact: true }).count(), 1);
+        if (path === "/license-optimizer") assert.equal(await page.getByRole("heading", { name: "License inventory", exact: true }).count(), 1);
+        else if (path === "/application-rationalization") assert.equal(await page.getByRole("button", { name: "Analyze applications", exact: true }).count(), 1);
+        else assert.equal(await page.getByText("Not yet implemented", { exact: true }).count(), 1);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       }
       assert.equal(await page.locator("nav a").count(), 10);

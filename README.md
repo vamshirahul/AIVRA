@@ -48,7 +48,8 @@ The current UI uses the founder-approved **A1 Coastal Navy** theme (ADR-011).
 Home shows counts from the shared fictional session. Data Mapper now offers a
 read-only Buyer/Target application inventory preview; Application Rationalization
 has a readiness-only Analyze action, License Optimizer shows the shared read-only
-license inventory, and the other six business pages remain introductions. Live AI
+license inventory, and Cost Synergy has an estimate-readiness workspace. The other
+five business pages remain introductions. Live AI
 remains disabled.
 
 | Group | Page | Route |
@@ -149,8 +150,24 @@ net benefit. It uses exact integer CAD cents, preserves unknowns and original AI
 recommendations, and withholds overlapping whole-application spend claims.
 Run `npm run check:cse-calculation` (also in `check:ci`); see
 [U03.01 validation](U03.01_VALIDATION.md). The public CSE screen remains an
-introduction. Editable UI and exports remain later units; selected-license advisory
+honest no-analysis state. Editable estimates are supported only with a protected
+current reviewed context (see U03.02 below); exports remain future. Selected-license advisory
 data uses the separate handoff below. Numeric license contributions remain disabled.
+
+## Editable Cost Synergy workspace (U03.02 — in review)
+
+Cost Synergy now has an A1 Coastal Navy readiness screen and an internal editor
+for a protected, current reviewed ALA context. Visitors can explicitly include
+actions and enter exact CAD assumptions/basis notes and a whole-year horizon;
+Calculate/Recalculate uses unchanged `cse/calculation/v1`, retaining unknowns,
+coverage warnings and double-count safeguards. Inputs, previous/current estimates
+and original AI/visitor layers stay separate; financial drafts exist only in memory
+and clear on source/review change, navigation or refresh. No automatic savings.
+The public page still has **no validated ALA analysis** and shows no populated
+editor or simulated result. Live AI and numeric license aggregation remain disabled.
+Run `npm run check:cse-editor` (also in `check:ci`). See the
+[editor contract](docs/contracts/U03.02_CSE_Editable_Estimate_Contract.md) and
+[validation/browser evidence](U03.02_VALIDATION.md). No exports or saved scenarios.
 
 ## Selected license advisory handoff (U05.04 — in review)
 

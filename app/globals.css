@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* CSE assumptions use the existing A1 semantic colors and workspace dimensions. */
+.cse-workspace { margin-top: 28px; min-width: 0; overflow-wrap: anywhere; }
+.cse-panel { min-width: 0; margin: 16px 0; padding: clamp(16px, 2.5vw, 28px); border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.cse-workspace h2, .cse-workspace h3 { font-weight: 650; margin-bottom: 10px; }
+.cse-workspace p + p, .cse-workspace details { margin-top: 10px; }
+.cse-workspace summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.cse-empty h2 { margin-top: 20px; }
+.cse-empty a { display: inline-block; margin-top: 20px; }
+.cse-readiness, .cse-action-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px; }
+.cse-readiness .cse-panel { margin: 0; }
+.cse-muted { color: var(--muted); font-size: 12px; }
+.cse-warning { color: var(--warning); background: var(--warning-surface); border-left: 3px solid var(--warning); padding: 12px; margin-block: 12px; }
+.cse-error { color: var(--error); font-size: 12px; }
+.cse-action legend { padding-inline: 8px; font-weight: 650; max-width: 100%; }
+.cse-include { display: flex; align-items: flex-start; gap: 10px; margin-block: 20px; font-weight: 600; }
+.cse-include input { flex-shrink: 0; margin-top: 5px; width: 18px; height: 18px; accent-color: var(--accent); }
+.cse-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 20px; }
+.cse-fields label, .cse-controls > label { display: block; font-size: 12px; font-weight: 600; margin-block: 10px 6px; }
+.cse-workspace input[type=text], .cse-workspace textarea { box-sizing: border-box; display: block; min-width: 0; width: 100%; border: 1px solid var(--muted); border-radius: 5px; background: var(--surface); color: var(--foreground); padding: 10px; font: inherit; }
+.cse-workspace textarea { resize: vertical; }
+.cse-workspace [aria-invalid=true] { border-color: var(--error); }
+.cse-workspace :is(input, textarea, summary):focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.cse-controls > input { max-width: 220px; }
+.cse-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.cse-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; margin-block: 20px; }
+.cse-metrics > div { border: 1px solid var(--border); padding: 16px; border-radius: 6px; }
+.cse-metrics dt { color: var(--muted); font-size: 12px; }
+.cse-metrics dd { margin-top: 8px; font-size: 20px; font-weight: 650; }
+.cse-line-summary { border-top: 1px solid var(--border); margin-top: 12px; padding-top: 12px; font-size: 12px; }
+
 :root {
   color-scheme: light;
   --background: #F7F9FC;

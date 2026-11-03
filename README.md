@@ -48,8 +48,8 @@ The current UI uses the founder-approved **A1 Coastal Navy** theme (ADR-011).
 Home shows counts from the shared fictional session. Data Mapper now offers a
 read-only Buyer/Target application inventory preview; Application Rationalization
 has a readiness-only Analyze action, License Optimizer shows the shared read-only
-license inventory, and Cost Synergy has an estimate-readiness workspace. The other
-five business pages remain introductions. Live AI
+license inventory, and Cost Synergy and Scenario Modeling have readiness workspaces.
+The other four business pages remain introductions. Live AI
 remains disabled.
 
 | Group | Page | Route |
@@ -184,6 +184,21 @@ The public page still has no trusted result or download buttons. No live AI, sav
 scenarios, database or new dependencies. Run `npm run check:cse-export` (also in
 `check:ci`). See the [export contract](docs/contracts/U03.03_CSE_Estimate_Export_Contract.md)
 and [validation evidence](U03.03_VALIDATION.md).
+
+## One alternative scenario (U11.01 — in review)
+
+An internal protected workspace can explicitly clone current reviewed ALA actions
+and validated CSE assumptions into an immutable baseline and exactly one editable
+alternative. Scenario-only disposition/destination hypotheses and financial inputs,
+notes, inclusion and horizon stay separate from original AI advice, existing visitor
+overrides and baseline data. Existing ALA/CSE validation is reused; source/review/
+baseline changes clear the transient scenario. Nothing persists or calls AI.
+The real public page has **no validated reviewed ALA/CSE baseline** and shows only
+readiness links. Protected live-result/current-draft delivery remains unavailable.
+Comparative metrics (U11.02) and scenario exports/provenance presentation (U11.03)
+are not implemented. Run `npm run check:scenario-baseline` (also in `check:ci`).
+See the [scenario contract](docs/contracts/U11.01_Scenario_Baseline_Alternative_Contract.md)
+and [validation/browser evidence](U11.01_VALIDATION.md).
 
 ## Selected license advisory handoff (U05.04 — in review)
 

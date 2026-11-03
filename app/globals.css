@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+.scenario-compare-controls { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
+.scenario-comparison-table { width: 100%; border-collapse: collapse; margin-block: 18px; font-size: 12px; }
+.scenario-comparison-table caption { text-align: start; color: var(--muted); padding-block: 10px; }
+.scenario-comparison-table :is(th, td) { text-align: start; vertical-align: top; padding: 12px; border: 1px solid var(--border); overflow-wrap: anywhere; }
+.scenario-comparison-table thead { background: var(--accent-soft); }
+.scenario-comparison-warning { padding: 10px 12px; border-left: 3px solid var(--warning); color: var(--warning); background: var(--warning-surface); }
+.scenario-mobile-label { display: none; }
+@media (max-width: 640px) {
+  .scenario-comparison-table, .scenario-comparison-table tbody { display: block; }
+  .scenario-comparison-table caption { display: block; width: 100%; }
+  .scenario-comparison-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .scenario-comparison-table tr { display: grid; margin-bottom: 14px; }
+  .scenario-comparison-table :is(th, td) { display: block; min-width: 0; }
+  .scenario-mobile-label { display: block; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+}
+
 .scenario-workspace { margin-top: 28px; min-width: 0; overflow-wrap: anywhere; }
 .scenario-panel { margin: 16px 0; padding: clamp(16px, 2.5vw, 28px); min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
 .scenario-workspace h2, .scenario-workspace h3 { margin-block: 10px; font-weight: 650; }

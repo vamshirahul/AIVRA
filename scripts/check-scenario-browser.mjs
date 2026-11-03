@@ -12,11 +12,12 @@ import ts from "typescript";
 
 if (process.argv.includes("--render")) {
   registerHooks({ resolve(spec, context, next) { try { return next(spec, context); } catch (error) { if (spec.startsWith(".")) for (const ext of [".ts", ".tsx"]) { try { return next(spec + ext, context); } catch {} } throw error; } }, load(url, context, next) { if (/\.tsx?$/.test(url)) return { format: "module", shortCircuit: true, source: ts.transpileModule(readFileSync(fileURLToPath(url), "utf8"), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText }; return next(url, context); } });
-  const { createElement: h } = await import("react"), { renderToStaticMarkup } = await import("react-dom/server"), { ScenarioEditor, ScenarioEmptyState } = await import("../components/scenario-modeling/scenario-workspace.ts");
-  let raw = ""; for await (const chunk of process.stdin) raw += chunk; const props = JSON.parse(raw); globalThis.fetch = () => { throw Error("Offline SSR forbids network"); }; process.stdout.write(renderToStaticMarkup(h(props.source ? ScenarioEditor : ScenarioEmptyState, props))); process.exit(0);
+  const { createElement: h } = await import("react"), { renderToStaticMarkup } = await import("react-dom/server"), { ScenarioEditor, ScenarioEmptyState, ScenarioComparisonView } = await import("../components/scenario-modeling/scenario-workspace.ts");
+  let raw = ""; for await (const chunk of process.stdin) raw += chunk; const props = JSON.parse(raw); globalThis.fetch = () => { throw Error("Offline SSR forbids network"); }; process.stdout.write(renderToStaticMarkup(h(props.comparison ? ScenarioComparisonView : props.source ? ScenarioEditor : ScenarioEmptyState, props))); process.exit(0);
 }
 assert.ok(process.env.AIVRA_CHROMIUM_PATH, "Set installed AIVRA_CHROMIUM_PATH");
-const fixture = JSON.parse(await readFile(".temp/u11-01/fixture.json", "utf8")), output = ".temp/u11-01"; await mkdir(output, { recursive: true });
+const comparisonChecks = process.env.AIVRA_SCENARIO_COMPARE_BROWSER === "1";
+const fixture = JSON.parse(await readFile(".temp/u11-01/fixture.json", "utf8")), output = comparisonChecks ? ".temp/u11-02" : ".temp/u11-01"; await mkdir(output, { recursive: true });
 const modules = [], ids = new Map();
 function bundleModule(file, source) {
   if (ids.has(file)) return ids.get(file); const id = modules.length; ids.set(file, id); modules.push(""); let code = source ?? readFileSync(file, "utf8");
@@ -33,7 +34,7 @@ function Harness(){const state=useDemoSession();const [source,setSource]=useStat
 createRoot(document.getElementById('root')).render(h(DemoSessionProvider,null,h(Harness)));`);
 const bundle = `(()=>{const process={env:{NODE_ENV:'production'}},m=[${modules.join(",")}],c={};function __r(i){if(c[i])return c[i].exports;const x=c[i]={exports:{}};m[i](x,x.exports,__r);return x.exports}__r(${entry});})();`;
 const css = (await readFile("app/globals.css", "utf8")).replace(/@import[^;]+;/g, "").replace(/@theme inline\s*\{[^}]+\}/g, "");
-const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Fabricated offline scenario test only</title><style>${css}body{padding:20px}#root{max-width:1180px;margin:auto}</style></head><body><p>Fabricated offline test only — no genuine AI analysis</p><main id="root"></main><script src="/bundle.js"></script></body></html>`;
+const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Fabricated offline scenario test only</title><style>${css}:root{--font-sans:"Segoe UI",Arial,Helvetica,sans-serif}body{padding:20px}#root{max-width:1180px;margin:auto}</style></head><body><p>Fabricated offline test only — no genuine AI analysis</p><main id="root"></main><script src="/bundle.js"></script></body></html>`;
 const server = createServer((req, res) => { if (req.url === "/bundle.js") { res.setHeader("content-type", "text/javascript"); res.end(bundle); } else if (req.url === "/") { res.setHeader("content-type", "text/html"); res.end(html); } else { res.statusCode = 404; res.end(); } }); await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const url = `http://127.0.0.1:${server.address().port}/`, profile = await mkdtemp(path.join(tmpdir(), "aivra-scenario-"));
 const browser = spawn(process.env.AIVRA_CHROMIUM_PATH, ["--headless", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true });
@@ -50,12 +51,22 @@ try {
   async function key(name, code, modifiers = 0) { for (const type of ["keyDown", "keyUp"]) await page("Input.dispatchKeyEvent", { type, key: name, code: name, windowsVirtualKeyCode: code, modifiers, ...(name === "Enter" && type === "keyDown" ? { text: "\r" } : {}) }); }
   async function click(text) { await waitFor(`[...document.querySelectorAll('button')].some(b=>b.textContent===${JSON.stringify(text)})`); await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent===${JSON.stringify(text)}).focus()`); await key("Enter", 13); }
   async function enter(selector, text) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`); await key("a", 65, 2); await key("Backspace", 8); if (text) await page("Input.insertText", { text }); }
-  async function screenshot(name, width) { await page("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: false }); await evaluate("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))"); assert.equal(await evaluate("document.documentElement.scrollWidth>document.documentElement.clientWidth"), false); const { data } = await page("Page.captureScreenshot", { format: "png", captureBeyondViewport: true }); const file = `${name}-${width}.png`; await writeFile(`${output}/${file}`, Buffer.from(data, "base64")); evidence.screenshots.push(file); }
+  async function screenshot(name, width) {
+    await page("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: false });
+    await evaluate("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))");
+    assert.equal(await evaluate("document.documentElement.scrollWidth>document.documentElement.clientWidth"), false);
+    if (comparisonChecks && name === "populated-offline" && width <= 640) {
+      assert.ok(await evaluate("(()=>{const t=document.querySelector('.scenario-comparison-table'),c=t.querySelector('caption');return c.getBoundingClientRect().width>=t.getBoundingClientRect().width*.95 && c.getBoundingClientRect().height<200})()"), "Mobile comparison caption must remain readable at full table width");
+    }
+    const { data } = await page("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+    const file = `${name}-${width}.png`; await writeFile(`${output}/${file}`, Buffer.from(data, "base64")); evidence.screenshots.push(file);
+  }
   const alt = "document.querySelector('[aria-label=\"Single alternative scenario\"]')";
   await page("Page.enable"); await page("Runtime.enable"); await page("Network.enable"); await page("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await page("Page.navigate", { url }); await waitFor("[...document.querySelectorAll('button')].some(b=>b.textContent==='Clone baseline')"); assert.equal(await evaluate(`${alt}!==null`), false);
   const originalSource = await evaluate("JSON.stringify(window.offlineScenario.source)"), originalStorage = await evaluate("JSON.stringify({...sessionStorage})");
   await click("Clone baseline"); await waitFor(`${alt}!==null`); assert.equal(await evaluate("[...document.querySelectorAll('button')].filter(b=>b.textContent==='Clone baseline').length"), 0);
+  if (comparisonChecks) { await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')!==null"); assert.ok(await evaluate("document.querySelector('.scenario-comparison-table').textContent.includes('+CAD 0.00')")); }
   assert.equal(await evaluate("document.querySelectorAll('.scenario-baseline input,.scenario-baseline select,.scenario-baseline textarea').length"), 0); const baseline = await evaluate("document.querySelector('.scenario-baseline').textContent");
   assert.ok(baseline.includes("Original AI: Needs Review")); assert.ok(baseline.includes("Reviewed baseline: Retire"));
   await evaluate("document.querySelector('.scenario-action summary').focus()"); await key("Enter", 13);
@@ -66,19 +77,34 @@ try {
   await evaluate(`document.querySelectorAll('${action} select')[1].focus()`); await key("Home", 36); await key("ArrowDown", 40); await key("Tab", 9);
   await enter(`${action} textarea`, "Fabricated scenario justification"); await click("Save action hypothesis"); await waitFor("document.querySelector('.scenario-action summary').textContent.includes('edited hypothesis')");
   assert.ok(await evaluate("document.activeElement.matches('.scenario-action summary')"));
-  await enter(`${finances} input[type=text]`, "-1"); await click("Save financial assumptions"); await waitFor("document.querySelector('.scenario-action input[aria-invalid=true]')!==null");
+  if (comparisonChecks) { assert.equal(await evaluate("document.querySelector('.scenario-comparison')!==null"), false); await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')?.textContent.includes('has not been modeled')"); assert.ok(await evaluate("document.querySelector('.scenario-comparison-table').textContent.includes('+CAD 0.00')")); }
+  await enter(`${finances} input[type=text]`, "-1");
+  if (comparisonChecks) { assert.equal(await evaluate("document.querySelector('.scenario-comparison')!==null"), false); assert.ok(await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Compare scenarios').disabled")); }
+  await click("Save financial assumptions"); await waitFor("document.querySelector('.scenario-action input[aria-invalid=true]')!==null");
   await enter(`${finances} input[type=text]`, "0.00"); await enter(`${finances} textarea`, "Explicit invented zero basis"); await click("Save financial assumptions");
   await waitFor(`${alt}.textContent.includes('1 financial rows changed')`); assert.ok(await evaluate("document.activeElement.matches('.scenario-action summary')"));
+  if (comparisonChecks) { await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')!==null"); assert.ok(await evaluate("document.querySelector('.scenario-comparison-table').textContent.includes('−CAD 300.00')")); }
   await evaluate(`document.querySelector('${finances} input[type=checkbox]').focus()`); await key(" ", 32); await click("Save financial assumptions"); assert.equal(await evaluate(`document.querySelector('${finances} input[type=checkbox]').checked`), false);
+  if (comparisonChecks) {
+    await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')?.textContent.includes('not computable')"); assert.ok(await evaluate("document.querySelector('.scenario-comparison-table').textContent.includes('Unknown / Not computable')"));
+    await evaluate(`document.querySelector('${finances} input[type=checkbox]').focus()`); await key(" ", 32); await enter(`${finances} input[type=text]`, "200"); await click("Save financial assumptions");
+  }
   const horizon = ".scenario-panel[aria-label='Single alternative scenario'] > form input[type=text]";
   await enter(horizon, "5"); await click("Save alternative horizon"); await waitFor(`document.querySelector(${JSON.stringify(horizon)}).value==='5'`);
+  if (comparisonChecks) { await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison-table')?.textContent.includes('Not comparable')"); assert.ok(await evaluate("document.querySelector('.scenario-comparison').textContent.includes('Different or unknown horizons')")); }
   assert.equal(await evaluate("document.querySelector('.scenario-baseline').textContent"), baseline); assert.equal(await evaluate("JSON.stringify(window.offlineScenario.source)"), originalSource); assert.equal(await evaluate("JSON.stringify({...sessionStorage})"), originalStorage);
   const { nodes } = await page("Accessibility.getFullAXTree"); for (const name of ["Alternative disposition", "Scenario justification (required for a change)", "Save financial assumptions"]) assert.ok(nodes.some((n) => !n.ignored && n.name?.value === name), name);
   for (const width of [1440, 390, 320]) await screenshot("populated-offline", width);
   await click("Restore baseline action"); await waitFor("!document.querySelector('.scenario-action summary').textContent.includes('edited hypothesis')"); await click("Restore baseline financial inputs"); await waitFor(`${alt}.textContent.includes('0 financial rows changed')`);
   await click("Reset alternative to baseline"); assert.equal(await evaluate("document.querySelectorAll('[aria-label=\"Single alternative scenario\"]').length"), 1); assert.equal(await evaluate(`document.querySelector(${JSON.stringify(horizon)}).value`), "3"); assert.equal(await evaluate("document.querySelector('.scenario-baseline').textContent"), baseline);
-  evidence.checks.push("Keyboard Clone creates exactly one alternative; original AI/baseline visitor/scenario layers separated; missing destination and negative amount rejected, action/zero-money/horizon saves, restores/reset/focus and source/baseline/storage isolation verified; no metrics/export.");
+  if (comparisonChecks) {
+    assert.equal(await evaluate("document.querySelector('.scenario-comparison')!==null"), false); await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')!==null");
+    await enter(`${finances} textarea`, "Unsaved basis"); assert.equal(await evaluate("document.querySelector('.scenario-comparison')!==null"), false); await click("Reset alternative to baseline"); assert.equal(await evaluate(`document.querySelector('${finances} textarea').value`), "Fabricated explicit annual basis"); await click("Compare scenarios");
+    evidence.checks.push("Explicit Compare/recompare, disposition-only zero deltas/unpriced disclosure, unsaved/invalid/changed/reset hiding, negative net and signed differences, unavailable excluded totals, mismatched-horizon withholding and reset of unsaved forms verified.");
+  }
+  evidence.checks.push("Keyboard Clone creates exactly one alternative; original AI/baseline visitor/scenario layers separated; missing destination and negative amount rejected, action/zero-money/horizon saves, restores/reset/focus and source/baseline/storage isolation verified; no scenario export.");
   await evaluate("window.offlineScenario.state.updateTSA(window.offlineScenario.state.session.current_deal.tsa_services[0].tsa_id,{title:'Offline TSA only'})"); assert.ok(await evaluate(`${alt}!==null`));
+  if (comparisonChecks) assert.ok(await evaluate("document.querySelector('.scenario-comparison')!==null"));
   await evaluate("window.offlineScenario.setSource({...window.offlineScenario.source,financial_draft:{...window.offlineScenario.source.financial_draft,horizon:'5'}})"); await waitFor(`${alt}===null`); await click("Clone baseline"); await waitFor(`${alt}!==null`);
   await evaluate("window.offlineScenario.state.updateLicense(window.offlineScenario.state.session.current_deal.license_positions[0].license_id,{notes:'Offline license change'})"); await waitFor(`${alt}===null`); assert.equal(await evaluate("[...document.querySelectorAll('button')].some(b=>b.textContent==='Clone baseline')"), false);
   await page("Page.reload"); await waitFor("[...document.querySelectorAll('button')].some(b=>b.textContent==='Clone baseline')"); assert.equal(await evaluate(`${alt}!==null`), false);
@@ -89,5 +115,5 @@ try {
   for (const width of [1440, 390, 320]) await screenshot("public-empty", width);
   await evaluate("document.querySelector('.scenario-links a').focus()"); await key("Enter", 13); await waitFor("location.pathname==='/application-rationalization'");
   assert.deepEqual(evidence.runtimeErrors, []); assert.deepEqual(evidence.externalRequests, []); evidence.checks.push("Real public unavailable state has prerequisite links and no populated clone/edit/metric/export controls; 1440/390/320 no page overflow; zero runtime/console errors/external page requests.");
-  await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2) + "\n"); console.log(`PASS: ${evidence.checks.length} U11.01 browser groups, six screenshots; evidence ${output}/browser-checks.json`); await send("Browser.close");
+  await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2) + "\n"); console.log(`PASS: ${evidence.checks.length} ${comparisonChecks ? "U11.02" : "U11.01"} browser groups, six screenshots; evidence ${output}/browser-checks.json`); await send("Browser.close");
 } finally { socket?.close(); browser.kill(); server.close(); }

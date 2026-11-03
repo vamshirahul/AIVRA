@@ -26,7 +26,8 @@
     "check:cse-calculation": "node --conditions=react-server scripts/check-cse-calculation.mts",
     "check:license-cse-handoff": "node --conditions=react-server scripts/check-license-cse-handoff.mts",
     "check:cse-editor": "node --conditions=react-server scripts/check-cse-editor.mts",
-    "check:ci": "npm run validate:fixture && node scripts/check-demo-session.mts && npm run check:ai-adapter && npm run check:ai-controls && npm run check:ai-ui && npm run check:data-mapper && npm run check:csv-preview && npm run check:column-mapping && npm run check:publish-applications && npm run check:ala-contract && npm run check:ala-action && npm run check:ala-grid && npm run check:ala-review && npm run check:ala-export && npm run check:license-inventory && npm run check:license-findings && npm run check:license-review && npm run check:cse-calculation && npm run check:license-cse-handoff && npm run check:cse-editor && npm run typecheck && npm run build"
+    "check:cse-export": "node --conditions=react-server scripts/check-cse-export.mts",
+    "check:ci": "npm run validate:fixture && node scripts/check-demo-session.mts && npm run check:ai-adapter && npm run check:ai-controls && npm run check:ai-ui && npm run check:data-mapper && npm run check:csv-preview && npm run check:column-mapping && npm run check:publish-applications && npm run check:ala-contract && npm run check:ala-action && npm run check:ala-grid && npm run check:ala-review && npm run check:ala-export && npm run check:license-inventory && npm run check:license-findings && npm run check:license-review && npm run check:cse-calculation && npm run check:license-cse-handoff && npm run check:cse-editor && npm run check:cse-export && npm run typecheck && npm run build"
   },
   "engines": {
     "node": ">=24.22.1 <25",

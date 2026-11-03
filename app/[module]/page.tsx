@@ -9,6 +9,7 @@ import { AnalyzeApplications } from "../../components/ala/analyze-applications";
 import { LicenseInventory } from "../../components/license-optimizer/license-inventory";
 import { CostSynergyEstimateWorkspace } from "../../components/cost-synergy/estimate-workspace";
 import { ScenarioWorkspace } from "../../components/scenario-modeling/scenario-workspace";
+import { TSAInventory } from "../../components/tsa-tracker/tsa-inventory";
 
 export const dynamicParams = false;
 
@@ -40,7 +41,7 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
       <p className="page-description">{module.purpose}</p>
       {["/license-optimizer", "/playbook-generator", "/ai-assistant"].includes(module.href) && <AIStatusNotice state={{ status: "not_enabled" }} />}
 
-      {module.href === "/data-mapper" ? <SampleInventoryPreview /> : module.href === "/application-rationalization" ? <AnalyzeApplications /> : module.href === "/license-optimizer" ? <LicenseInventory /> : module.href === "/cost-synergy" ? <CostSynergyEstimateWorkspace /> : module.href === "/scenario-modeling" ? <ScenarioWorkspace /> : <>
+      {module.href === "/data-mapper" ? <SampleInventoryPreview /> : module.href === "/application-rationalization" ? <AnalyzeApplications /> : module.href === "/license-optimizer" ? <LicenseInventory /> : module.href === "/cost-synergy" ? <CostSynergyEstimateWorkspace /> : module.href === "/scenario-modeling" ? <ScenarioWorkspace /> : module.href === "/tsa-tracker" ? <TSAInventory /> : <>
       <Card className="mt-9 px-6 py-9 sm:p-10">
         <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-background text-muted" aria-hidden="true">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>

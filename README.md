@@ -48,8 +48,9 @@ The current UI uses the founder-approved **A1 Coastal Navy** theme (ADR-011).
 Home shows counts from the shared fictional session. Data Mapper now offers a
 read-only Buyer/Target application inventory preview; Application Rationalization
 has a readiness-only Analyze action, License Optimizer shows the shared read-only
-license inventory, and Cost Synergy and Scenario Modeling have readiness workspaces.
-The other four business pages remain introductions. Live AI
+license inventory, TSA Tracker shows current linked synthetic services, and Cost
+Synergy and Scenario Modeling have readiness workspaces.
+The other three business pages remain introductions. Live AI
 remains disabled.
 
 | Group | Page | Route |
@@ -227,6 +228,20 @@ or export controls. No new AI, dependency, persistence or deployment. Run
 `npm run check:scenario-export` (also in `check:ci`). See the
 [export contract](docs/contracts/U11.03_Scenario_Provenance_Export_Contract.md) and
 [validation evidence](U11.03_VALIDATION.md).
+
+## TSA service inventory (U07.01 — in review)
+
+`/tsa-tracker` displays the current shared synthetic TSA records with stable IDs,
+service/provider/recipient/owner, exact ISO dates, source statuses, exit milestones,
+risk notes and linked application IDs, Buyer/Target sides and current names.
+Unknown fields stay unknown; omitted relationship information differs from an empty
+link list. The accessible table scrolls within its region on smaller screens.
+No date-derived risk, editing, status changes, filtering, exports or dashboard
+publication. No AI, new dependencies or persistence. Run `npm run check:tsa-inventory`
+(also in `check:ci`). Optional Chromium: `node scripts/check-demo-session-browser.mjs
+--tsa-browser` with `AIVRA_CHROMIUM_PATH` and local `AIVRA_BASE_URL`.
+See the [view contract](docs/contracts/U07.01_TSA_Inventory_View_Contract.md) and
+[validation evidence](U07.01_VALIDATION.md).
 
 ## Selected license advisory handoff (U05.04 — in review)
 

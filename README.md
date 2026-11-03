@@ -195,10 +195,22 @@ overrides and baseline data. Existing ALA/CSE validation is reused; source/revie
 baseline changes clear the transient scenario. Nothing persists or calls AI.
 The real public page has **no validated reviewed ALA/CSE baseline** and shows only
 readiness links. Protected live-result/current-draft delivery remains unavailable.
-Comparative metrics (U11.02) and scenario exports/provenance presentation (U11.03)
-are not implemented. Run `npm run check:scenario-baseline` (also in `check:ci`).
+The comparison below uses explicit visitor financial inputs. Scenario exports/rich
+provenance presentation (U11.03) remain future. Run `npm run check:scenario-baseline` (also in `check:ci`).
 See the [scenario contract](docs/contracts/U11.01_Scenario_Baseline_Alternative_Contract.md)
 and [validation/browser evidence](U11.01_VALIDATION.md).
+
+## Scenario financial comparison (U11.02 — in review)
+
+For a protected current scenario, **Compare scenarios** calculates both sides with
+the unchanged CSE engine and shows exact signed CAD-cent differences. Disposition
+hypotheses remain separate: changing a label never generates savings. Missing values
+stay unknown and mismatched/unknown horizons withhold period savings/net differences.
+Edits hide old comparisons; unsaved forms must be saved/restored before comparing.
+The actual public page still has no trusted baseline or populated comparison.
+No new AI, persistence, scenario export or dependency. Run `npm run check:scenario-comparison`
+(also in `check:ci`). See the [comparison contract](docs/contracts/U11.02_Scenario_Comparison_Contract.md)
+and [validation evidence](U11.02_VALIDATION.md).
 
 ## Selected license advisory handoff (U05.04 — in review)
 

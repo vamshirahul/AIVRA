@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement as h, useEffect, useId, useRef, useState } from "react";
+import { createElement as h, useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useDemoSession } from "../demo-session-provider.tsx";
 import { editorSessionStamp, matchesEditorSession, verifyEditorDigest, MONEY_FIELDS, formatCAD } from "../../lib/cost-synergy/estimate-form.ts";
@@ -10,13 +10,16 @@ import type { ScenarioSource, ScenarioDraft, ScenarioOperation, ScenarioActionEd
 import type { ActionDraft, MoneyField } from "../../lib/cost-synergy/estimate-form.ts";
 import { compareScenarios, COMPARISON_METRICS } from "../../lib/scenario-modeling/scenario-comparison.ts";
 import type { ScenarioComparison, ComparisonMetric } from "../../lib/scenario-modeling/scenario-comparison.ts";
+import { captureScenarioExport, revokeScenarioExport, downloadScenarioComparison } from "../../lib/scenario-modeling/scenario-export.ts";
+import type { ScenarioExportPermit, ScenarioExportFormat } from "../../lib/scenario-modeling/scenario-export.ts";
 
 const labels: Record<MoneyField, string> = { annual_run_rate: "Annual recurring savings", migration_one_time_cost: "One-time migration cost", transition_overlap_cost: "One-time transition overlap cost" };
-const boundary = "Comparisons use explicit visitor financial assumptions only. Changing a disposition does not automatically change savings. Scenario exports are not available.";
-export function ScenarioEmptyState({ checking = false }: { checking?: boolean }) {
+const boundary = "Comparisons use explicit visitor financial assumptions only. Changing a disposition does not automatically change savings. Downloads require a current explicitly compared scenario.";
+export function ScenarioEmptyState({ checking = false, stale = false }: { checking?: boolean; stale?: boolean }) {
   return h("section", { className: "scenario-workspace", "aria-label": "Scenario readiness" }, h("div", { className: "scenario-panel" },
     h("span", { className: "badge" }, "Draft / illustrative / unapproved"), h("h2", { className: "section-title" }, checking ? "Checking baseline source" : "No validated reviewed ALA/CSE baseline available"),
     h("p", { role: "status" }, checking ? "The supplied baseline is being checked against this session. Scenario controls remain unavailable." : "A current reviewed Application Rationalization result and validated Cost Synergy assumptions are required before cloning a scenario."),
+    stale && h("p", { role: "alert", className: "scenario-comparison-warning" }, "Stale or unverified baseline: previous comparisons and downloads are revoked. Return to the current reviewed ALA result and CSE assumptions before cloning and comparing again."),
     h("div", { className: "scenario-links" }, h("a", { className: "text-link", href: "/application-rationalization" }, "View Application Rationalization"), h("a", { className: "text-link", href: "/cost-synergy" }, "View Cost Synergy")), h("p", { className: "scenario-muted" }, boundary)));
 }
 /** No public source supplied. A protected owner must provide the original validated
@@ -28,26 +31,43 @@ export function ScenarioWorkspace({ source = null, current = false }: { source?:
   const eligible = !!(source && current && ready && session && isScenarioSource(source) && matchesEditorSession(source.context, session));
   const [verified, setVerified] = useState<{ key: string; ok: boolean } | null>(null);
   useEffect(() => { let active = true; if (eligible && source && session) void verifyEditorDigest(source.context, session).then((ok) => { if (active) setVerified({ key, ok }); }); else setVerified(null); return () => { active = false; }; }, [key, eligible, source, session]);
-  if (!eligible || !source || verified?.key !== key || !verified.ok) return h(ScenarioEmptyState, { checking: eligible && verified?.key !== key });
-  return h(ScenarioEditor, { key, source });
+  if (!eligible || !source || verified?.key !== key || !verified.ok) return h(ScenarioEmptyState, { checking: eligible && verified?.key !== key, stale: !!source });
+  return h(ScenarioEditor, { key, source, exportAuthorized: true });
 }
-export function ScenarioEditor({ source }: { source: ScenarioSource }) {
+export function ScenarioEditor({ source, exportAuthorized = false }: { source: ScenarioSource; exportAuthorized?: boolean }) {
   const [scenario, setScenario] = useState<ScenarioDraft | null>(null), [errors, setErrors] = useState<Record<string, string>>({});
   const [comparison, setComparison] = useState<ScenarioComparison | null>(null), [comparisonMessage, setComparisonMessage] = useState("");
   const [dirtyForms, setDirtyForms] = useState<string[]>([]), [formVersions, setFormVersions] = useState<Record<string, number>>({}), [resetVersion, setResetVersion] = useState(0);
-  function invalidate() { setComparison(null); setComparisonMessage("Inputs changed — compare again after saving or restoring unsaved inputs."); }
-  function markDirty(key: string) { invalidate(); setDirtyForms((keys) => keys.includes(key) ? keys : [...keys, key]); }
+  const dirtyKeys = useRef(new Set<string>());
+  const permit = useRef<ScenarioExportPermit | null>(null), [exportReady, setExportReady] = useState(false), [downloadMessage, setDownloadMessage] = useState("");
+  useLayoutEffect(() => () => revokeScenarioExport(permit.current), []);
+  useLayoutEffect(() => { if (!exportAuthorized) { revokeScenarioExport(permit.current); permit.current = null; setExportReady(false); } }, [exportAuthorized]);
+  function clearExport() { revokeScenarioExport(permit.current); permit.current = null; setExportReady(false); setDownloadMessage(""); }
+  function invalidate() { clearExport(); setComparison(null); setComparisonMessage("Previous comparison is stale; downloads revoked. Save or restore unsaved inputs, then compare again."); }
+  function markDirty(key: string) { dirtyKeys.current.add(key); invalidate(); setDirtyForms([...dirtyKeys.current]); }
   const latest = useRef(scenario), focus = useRef<string | null>(null); latest.current = scenario;
   const id = useId();
   useEffect(() => { if (focus.current) { document.getElementById(focus.current)?.focus(); focus.current = null; } }, [scenario]);
   function apply(operation: (s: ScenarioDraft) => ScenarioOperation, target: string, formKey = ""): ScenarioOperation {
     invalidate();
     const value = latest.current, result: ScenarioOperation = value ? operation(value) : { ok: false, errors: { form: "Clone a current baseline first." } };
-    if (result.ok) { latest.current = result.scenario; focus.current = target; setScenario(result.scenario); setDirtyForms((keys) => keys.filter((k) => k !== formKey)); setFormVersions((versions) => ({ ...versions, [formKey]: (versions[formKey] ?? 0) + 1 })); } return result;
+    if (result.ok) { latest.current = result.scenario; focus.current = target; setScenario(result.scenario); dirtyKeys.current.delete(formKey); setDirtyForms([...dirtyKeys.current]); setFormVersions((versions) => ({ ...versions, [formKey]: (versions[formKey] ?? 0) + 1 })); } return result;
   }
   const c = source.context, reviewed = c.reviewed!;
   const valid = scenario ? validateCurrentScenario(source, scenario) : null;
-  if (scenario && !valid) return h(ScenarioEmptyState);
+  if (scenario && !valid) { revokeScenarioExport(permit.current); return h(ScenarioEmptyState, { stale: true }); }
+  function compare() {
+    clearExport();
+    if (dirtyKeys.current.size > 0) { setComparison(null); setComparisonMessage("Save or restore unsaved inputs before comparing or downloading."); return; }
+    const r = compareScenarios(source, latest.current);
+    setComparison(r.ok ? r.comparison : null); setComparisonMessage(r.ok ? "Comparison calculated from explicit visitor amounts." : r.message);
+    if (r.ok) { permit.current = captureScenarioExport(source, latest.current, r.comparison, exportAuthorized, dirtyKeys.current.size > 0); setExportReady(permit.current !== null); }
+  }
+  function download(format: ScenarioExportFormat) {
+    const result = downloadScenarioComparison(permit.current, source, latest.current, comparison, exportAuthorized, dirtyKeys.current.size > 0, format);
+    if (!result.ok && result.code === "export_unavailable") clearExport();
+    setDownloadMessage(result.ok ? "Download initiated. Synthetic, hypothetical, illustrative and unapproved." : result.message);
+  }
   return h("section", { className: "scenario-workspace", "aria-label": "Baseline and one alternative" },
     h("div", { className: "scenario-panel" }, h("span", { className: "badge" }, "Draft / illustrative / synthetic source data"),
       h("h2", { className: "section-title" }, "Baseline source"),
@@ -80,9 +100,14 @@ export function ScenarioEditor({ source }: { source: ScenarioSource }) {
             h(FinancialForm, { key: `${resetVersion}-${formVersions[`money:${a.action_id}`] ?? 0}-${JSON.stringify(row)}`, row, onDirty: () => markDirty(`money:${a.action_id}`), save: (next: ActionDraft) => apply((s) => editAlternativeFinancialInput(source, s, next), target, `money:${a.action_id}`), restore: () => apply((s) => restoreAlternativeFinancialInput(source, s, a.action_id), target, `money:${a.action_id}`) }));
         }),
         h(HorizonForm, { key: `${resetVersion}-${formVersions.horizon ?? 0}-${scenario.alternative.financial_draft.horizon}`, value: scenario.alternative.financial_draft.horizon, onDirty: () => markDirty("horizon"), save: (value: string) => apply((s) => editAlternativeHorizon(source, s, value), `${id}-alternative`, "horizon"), restore: () => apply((s) => editAlternativeHorizon(source, s, s.baseline.financial_draft.horizon), `${id}-alternative`, "horizon") }),
-        h("button", { className: "button button-secondary", type: "button", onClick: () => { const r = apply((s) => resetAlternative(source, s), `${id}-alternative`); if (!r.ok) setErrors(r.errors); else { setDirtyForms([]); setResetVersion((v) => v + 1); } } }, "Reset alternative to baseline"),
-        h("div", { className: "scenario-compare-controls" }, h("button", { className: "button button-primary", type: "button", disabled: dirtyForms.length > 0, onClick: () => { const r = compareScenarios(source, latest.current); setComparison(r.ok ? r.comparison : null); setComparisonMessage(r.ok ? "Comparison calculated from explicit visitor amounts." : r.message); } }, "Compare scenarios"), h("p", { role: "status", "aria-live": "polite", className: "scenario-muted" }, dirtyForms.length ? "Save or restore unsaved inputs before comparing." : comparisonMessage)))),
+        h("button", { className: "button button-secondary", type: "button", onClick: () => { const r = apply((s) => resetAlternative(source, s), `${id}-alternative`); if (!r.ok) setErrors(r.errors); else { dirtyKeys.current.clear(); setDirtyForms([]); setResetVersion((v) => v + 1); } } }, "Reset alternative to baseline"),
+        h("div", { className: "scenario-compare-controls" }, h("button", { className: "button button-primary", type: "button", disabled: dirtyForms.length > 0, onClick: compare }, "Compare scenarios"), h("p", { role: "status", "aria-live": "polite", className: "scenario-muted" }, dirtyForms.length ? "Previous comparison is stale; downloads revoked. Save or restore unsaved inputs before comparing." : comparisonMessage)))),
     comparison && h(ScenarioComparisonView, { comparison }),
+    comparison && dirtyForms.length === 0 && h("section", { className: "scenario-panel", "aria-label": "Scenario downloads" }, h("h2", { className: "section-title" }, "Download current comparison"),
+      h("p", null, "Synthetic, hypothetical, illustrative and unapproved. JSON preserves the full snapshot; CSV includes metrics and structured evidence for both scenarios. No new AI analysis or verified savings."),
+      !exportReady && h("p", { role: "status", className: "scenario-comparison-warning" }, "Download unavailable: a current protected, supported comparison within the export size limit is required. Invalid or not-computable results cannot be downloaded."),
+      h("div", { className: "scenario-buttons" }, ...(["json", "csv"] as const).map((format) => h("button", { key: format, className: "button button-secondary", type: "button", disabled: !exportReady || !exportAuthorized, onClick: () => download(format) }, `Download scenario ${format.toUpperCase()}`))),
+      h("p", { role: "status", "aria-live": "polite", className: "scenario-muted" }, downloadMessage)),
     h("p", { className: "scenario-muted" }, boundary));
 }
 
@@ -95,6 +120,7 @@ export function ScenarioComparisonView({ comparison: c }: { comparison: Scenario
     h("p", { role: "status" }, `Comparison: ${c.status.replaceAll("_", " ")}. Baseline: ${b.status.replaceAll("_", " ")}; alternative: ${a.status.replaceAll("_", " ")}.`),
     h("p", null, `Horizon assumptions: baseline ${c.horizons.baseline ?? "Unknown"}; alternative ${c.horizons.alternative ?? "Unknown"} whole years. CAD amounts.`),
     h("p", { className: "scenario-muted" }, "Alternative amounts are explicit visitor assumptions. Disposition hypotheses do not generate financial effects or new AI recommendations. A positive cost difference means a larger cost, not a better outcome."),
+    h(ScenarioProvenanceView, { comparison: c }),
     !c.horizons.comparable && h("p", { className: "scenario-comparison-warning" }, "Different or unknown horizons: horizon savings and net-benefit differences are not comparable and are withheld."),
     h("table", { className: "scenario-comparison-table" }, h("caption", null, "Explicit financial assumptions calculated by the existing CSE engine. Difference = alternative minus baseline."),
       h("thead", null, h("tr", null, ...["Metric", "Baseline", "Alternative — hypothetical", "Alternative minus baseline"].map((name) => h("th", { key: name, scope: "col" }, name)))),
@@ -110,6 +136,22 @@ export function ScenarioComparisonView({ comparison: c }: { comparison: Scenario
     c.changed_actions.length === 0 ? h("p", null, "No disposition hypotheses changed.") : c.changed_actions.map((e) => h("p", { key: e.action_id }, `${e.finding_id} / ${e.action_id} / ${e.subject.side} / ${e.subject.app_id}: baseline ${e.baseline_effective.disposition}${e.baseline_effective.destination ? ` → ${e.baseline_effective.destination.side} / ${e.baseline_effective.destination.app_id}` : ""}; hypothetical ${e.disposition}${e.destination ? ` → ${e.destination.side} / ${e.destination.app_id}` : ""}. Scenario reason: ${e.scenario_reason}`)),
     c.unquantified_action_ids.length > 0 && h("p", { className: "scenario-comparison-warning" }, `No corresponding amount/inclusion adjustment for: ${c.unquantified_action_ids.join(", ")}. The financial effect of these hypotheses has not been modeled.`),
     h("details", null, h("summary", null, "Explicit financial assumption differences"), c.financial_changes.length === 0 ? h("p", null, "No financial rows changed.") : c.financial_changes.map((row) => h("div", { key: row.line_id, className: "scenario-baseline-row" }, h("h3", null, row.line_id), h("p", null, `Included: baseline ${row.baseline.included}; alternative ${row.alternative.included}.`), ...MONEY_FIELDS.map((field) => h("p", { key: field }, `${labels[field]}: baseline CAD ${row.baseline[field].amount || "Unknown"} (basis: ${row.baseline[field].note || "Not supplied"}); alternative CAD ${row.alternative[field].amount || "Unknown"} (basis: ${row.alternative[field].note || "Not supplied"}).`))))));
+}
+function ScenarioProvenanceView({ comparison: c }: { comparison: ScenarioComparison }) {
+  const source = c.source_binding.source, reviewed = c.baseline_result.context.reviewed!, analysis = reviewed.analysis, meta = analysis.metadata, p = analysis.provenance;
+  return h("details", { className: "scenario-provenance" }, h("summary", null, "Scenario provenance and original evidence"),
+    h("p", { className: "scenario-comparison-warning" }, "Synthetic/test data. Hypothetical, illustrative and unapproved. Original model provenance does not mean AI evaluated this alternative. Schema/digest checks are not authentication of inference."),
+    h("h3", null, "Source and reviewed result identity"),
+    h("dl", null, ...Object.entries({ Session: source.session_id, Fixture: source.fixture_id, "Dataset version": source.fixture_dataset_version, "Fixture schema": c.source_binding.fixture_schema_version, "Application revision": source.application_revision, "License revision": source.license_revision, "Source digest": source.source_digest, "Review digest": c.source_binding.review_digest, "Original request": p.request_id, "Original input digest": p.input_digest, "Original prompt": p.prompt_version, Provider: meta.model_provider, Model: meta.model_id, Mode: meta.mode, "Fallback reason": meta.routing_reason ?? "Unavailable / not supplied", "Original generation time": p.generated_at }).map(([label, value]) => h("div", { key: label }, h("dt", null, label), h("dd", null, String(value))))),
+    h("p", null, "Financial inputs are visitor assumptions. Baseline visitor overrides and alternative visitor hypotheses remain unapproved and separate from original LLM findings."),
+    h("p", null, `Coverage ${analysis.coverage.status}; missing ${reviewed.counts.missing}; not evaluated ${reviewed.counts.not_evaluated}. Incomplete coverage and unknown values are not complete portfolio savings.`),
+    ...analysis.missing.map((r) => h("p", { key: `missing-${r.app_id}` }, `Missing: ${r.side} / ${r.app_id}.`)),
+    ...analysis.not_evaluated.map((r) => h("p", { key: `unevaluated-${r.app_id}` }, `Not evaluated: ${r.side} / ${r.app_id}: ${r.reason}`)),
+    ...analysis.findings.map((f) => h("details", { key: f.finding_id, className: "scenario-baseline-row" }, h("summary", null, `Original LLM finding ${f.finding_id} — ${f.domain}`),
+      h("p", null, `${f.relationship}: ${f.rationale}`), h("p", null, `Uncertainty: ${f.uncertainty.level}. ${f.uncertainty.reason}`),
+      ...f.source_evidence.map((e, i) => h("p", { key: i }, `Source ${e.app_id} / ${e.attribute}: ${e.value === null ? "Unknown" : String(e.value)}`)),
+      ...reviewed.effective_actions.filter((a) => a.finding_id === f.finding_id).map((a) => h("div", { key: a.action_id }, h("p", null, `${a.subject.side} / ${a.subject.app_id} / ${a.action_id}. Original AI: ${a.original.disposition}${a.original.destination ? ` → ${a.original.destination.side} / ${a.original.destination.app_id}` : ""}. ${a.original.rationale}`),
+        h("p", null, `Reviewed baseline: ${a.effective.disposition}${a.effective.destination ? ` → ${a.effective.destination.side} / ${a.effective.destination.app_id}` : ""}. ${a.origin === "visitor_override" ? `Existing visitor override: ${a.visitor_reason}` : "Unchanged AI suggestion; no visitor approval."}`))))));
 }
 function ActionForm({ source, baseline, edit, save, restore, onDirty }: { source: ScenarioSource; baseline: BaselineAction; edit?: ScenarioActionEdit; save: (e: ScenarioActionEdit) => ScenarioOperation; restore: () => ScenarioOperation; onDirty: () => void }) {
   const [disposition, setDisposition] = useState(edit?.disposition ?? baseline.effective.disposition), [destination, setDestination] = useState(edit?.destination?.app_id ?? baseline.effective.destination?.app_id ?? ""), [reason, setReason] = useState(edit?.scenario_reason ?? ""), [errors, setErrors] = useState<Record<string, string>>({});

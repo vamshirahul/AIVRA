@@ -195,8 +195,8 @@ overrides and baseline data. Existing ALA/CSE validation is reused; source/revie
 baseline changes clear the transient scenario. Nothing persists or calls AI.
 The real public page has **no validated reviewed ALA/CSE baseline** and shows only
 readiness links. Protected live-result/current-draft delivery remains unavailable.
-The comparison below uses explicit visitor financial inputs. Scenario exports/rich
-provenance presentation (U11.03) remain future. Run `npm run check:scenario-baseline` (also in `check:ci`).
+The comparison below uses explicit visitor financial inputs; U11.03 adds protected
+provenance and exports. Run `npm run check:scenario-baseline` (also in `check:ci`).
 See the [scenario contract](docs/contracts/U11.01_Scenario_Baseline_Alternative_Contract.md)
 and [validation/browser evidence](U11.01_VALIDATION.md).
 
@@ -208,9 +208,25 @@ hypotheses remain separate: changing a label never generates savings. Missing va
 stay unknown and mismatched/unknown horizons withhold period savings/net differences.
 Edits hide old comparisons; unsaved forms must be saved/restored before comparing.
 The actual public page still has no trusted baseline or populated comparison.
-No new AI, persistence, scenario export or dependency. Run `npm run check:scenario-comparison`
+No new AI, persistence or dependency. Run `npm run check:scenario-comparison`
 (also in `check:ci`). See the [comparison contract](docs/contracts/U11.02_Scenario_Comparison_Contract.md)
 and [validation evidence](U11.02_VALIDATION.md).
+
+## Scenario provenance and export (U11.03 — in review)
+
+A protected, explicitly compared current scenario shows original model/source/review
+provenance and evidence separately from baseline visitor overrides and alternative
+hypotheses. Download **JSON or CSV** preserves both scenarios, original CSE results,
+exact cents, assumptions, nulls, coverage, conflicts, exclusions and limitations.
+Every raw edit, failed/successful Save, restore/reset, failed Compare or source change
+revokes download until a new successful Compare. Invalid/not-computable/unauthorized
+results cannot download. Files are bounded to 1,500,000 UTF-8 bytes; CSV protects
+formula-like text and retains detailed evidence in typed JSON-bearing rows.
+The public page remains readiness-only with no trusted baseline, simulated result
+or export controls. No new AI, dependency, persistence or deployment. Run
+`npm run check:scenario-export` (also in `check:ci`). See the
+[export contract](docs/contracts/U11.03_Scenario_Provenance_Export_Contract.md) and
+[validation evidence](U11.03_VALIDATION.md).
 
 ## Selected license advisory handoff (U05.04 — in review)
 

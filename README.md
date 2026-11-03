@@ -151,7 +151,8 @@ recommendations, and withholds overlapping whole-application spend claims.
 Run `npm run check:cse-calculation` (also in `check:ci`); see
 [U03.01 validation](U03.01_VALIDATION.md). The public CSE screen remains an
 honest no-analysis state. Editable estimates are supported only with a protected
-current reviewed context (see U03.02 below); exports remain future. Selected-license advisory
+current reviewed context (see U03.02 below); guarded downloads are described in U03.03.
+Selected-license advisory
 data uses the separate handoff below. Numeric license contributions remain disabled.
 
 ## Editable Cost Synergy workspace (U03.02 — in review)
@@ -167,7 +168,22 @@ The public page still has **no validated ALA analysis** and shows no populated
 editor or simulated result. Live AI and numeric license aggregation remain disabled.
 Run `npm run check:cse-editor` (also in `check:ci`). See the
 [editor contract](docs/contracts/U03.02_CSE_Editable_Estimate_Contract.md) and
-[validation/browser evidence](U03.02_VALIDATION.md). No exports or saved scenarios.
+[validation/browser evidence](U03.02_VALIDATION.md). Saved scenarios remain future.
+
+## Cost Synergy estimate downloads (U03.03 — in review)
+
+For a protected current calculated estimate, secondary **Download estimate JSON**
+and **Download estimate CSV** actions preserve exact CAD cents, assumptions,
+inclusions/exclusions, source/review identity, original AI versus visitor layers,
+coverage, warnings and nulls. The versioned `cse/estimate-export/v1` artifact uses
+unchanged `cse/calculation/v1` arithmetic. Incomplete estimates stay explicitly
+incomplete; invalid/not-computable estimates have no download. Every edit revokes
+export until recalculation; stale/reset results and previous snapshots cannot export.
+Files are bounded to 1,500,000 UTF-8 bytes; CSV includes formula protection.
+The public page still has no trusted result or download buttons. No live AI, saved
+scenarios, database or new dependencies. Run `npm run check:cse-export` (also in
+`check:ci`). See the [export contract](docs/contracts/U03.03_CSE_Estimate_Export_Contract.md)
+and [validation evidence](U03.03_VALIDATION.md).
 
 ## Selected license advisory handoff (U05.04 — in review)
 

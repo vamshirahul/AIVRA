@@ -8,6 +8,8 @@ import type { CSEContext, CSEResult, CSEReason } from "../../lib/cost-synergy/ca
 import { calculateCSE, sourceCostMinor } from "../../lib/cost-synergy/calculation.ts";
 import { MONEY_FIELDS, buildEstimateRequest, createEstimateDraft, editorIdentity, editorSessionStamp, formatCAD, matchesEditorSession, verifyEditorDigest } from "../../lib/cost-synergy/estimate-form.ts";
 import type { EstimateDraft, FormErrors, MoneyField } from "../../lib/cost-synergy/estimate-form.ts";
+import { captureEstimateExport, downloadCSEEstimate, revokeEstimateExport } from "../../lib/cost-synergy/estimate-export.ts";
+import type { CSEExportPermit, CSEExportFormat } from "../../lib/cost-synergy/estimate-export.ts";
 
 const labels: Record<MoneyField, string> = { annual_run_rate: "Annual recurring savings", migration_one_time_cost: "One-time migration cost", transition_overlap_cost: "One-time transition overlap cost" };
 const reasons: Record<CSEReason, string> = {
@@ -47,30 +49,36 @@ export function CostSynergyEstimateWorkspace({ context = null, current = false }
   }, [key, eligible, context, session]);
   // A changed key hides AND unmounts the old editor synchronously, before async digest checks.
   if (!eligible || verified?.key !== key || !verified.ok || !context) return h(CSEEmptyState, { checking: eligible && verified?.key !== key });
-  return h(CSEEditor, { key, context });
+  return h(CSEEditor, { key, context, exportAuthorized: true });
 }
 
 /** Internal controlled surface. Direct mounting is for protected composition/offline tests only. */
-export function CSEEditor({ context }: { context: CSEContext }) {
+export function CSEEditor({ context, exportAuthorized = false }: { context: CSEContext; exportAuthorized?: boolean }) {
   const [draft, setDraft] = useState<EstimateDraft>(() => createEstimateDraft(context));
   const [latest, setLatest] = useState<CSEResult | null>(null);
   const [previous, setPrevious] = useState<CSEResult | null>(null);
   const [calculatedDraft, setCalculatedDraft] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [exportPermit, setExportPermit] = useState<CSEExportPermit | null>(null);
+  useEffect(() => () => revokeEstimateExport(exportPermit), [exportPermit]);
+  function clearExport() { revokeEstimateExport(exportPermit); setExportPermit(null); }
   const id = useId();
   const validation = buildEstimateRequest(context, draft);
   const errors: FormErrors = validation.ok ? {} : validation.errors;
   const dirty = latest !== null && calculatedDraft !== JSON.stringify(draft);
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSubmitted(true);
+    clearExport();
     if (!validation.ok) return;
     const next = calculateCSE(validation.request, context);
+    setExportPermit(captureEstimateExport(next, context, draft, exportAuthorized));
     // Invalid output is never compared to, or retained as, a valid estimate.
     setPrevious(next.status !== "invalid" && latest?.status !== "invalid" && calculatedDraft !== JSON.stringify(draft) ? latest : previous);
     if (next.status === "invalid") setPrevious(null);
     setLatest(next); setCalculatedDraft(JSON.stringify(draft));
   }
   function edit(index: number, field: MoneyField, part: "amount" | "note", value: string) {
+    clearExport();
     setDraft((d) => ({ ...d, actions: d.actions.map((a, i) => i === index ? { ...a, [field]: { ...a[field], [part]: value } } : a) }));
   }
   const reviewed = context.reviewed!;
@@ -106,7 +114,7 @@ export function CSEEditor({ context }: { context: CSEContext }) {
             ...finding.source_evidence.map((e, i) => h("p", { key: i }, `${e.app_id} / ${e.attribute}: ${e.value === null ? "Unknown" : String(e.value)}`)),
             h("p", null, `Uncertainty: ${finding.uncertainty.level}. ${finding.uncertainty.reason}`)),
           h("label", { className: "cse-include" }, h("input", { type: "checkbox", checked: row.included, "aria-describedby": `${id}-hint`,
-            onChange: (event) => { const included = event.currentTarget.checked; setDraft((d) => ({ ...d, actions: d.actions.map((r, i) => i === index ? { ...r, included } : r) })); } }), `Include ${a.action_id} in this estimate (not approval)`),
+            onChange: (event) => { const included = event.currentTarget.checked; clearExport(); setDraft((d) => ({ ...d, actions: d.actions.map((r, i) => i === index ? { ...r, included } : r) })); } }), `Include ${a.action_id} in this estimate (not approval)`),
           h("div", { className: "cse-fields" }, ...MONEY_FIELDS.map((field) => {
             const prefix = `${id}-${a.action_id}-${field}`, amountError = errors[`${a.action_id}.${field}.amount`], noteError = errors[`${a.action_id}.${field}.note`];
             return h("div", { key: field },
@@ -120,15 +128,28 @@ export function CSEEditor({ context }: { context: CSEContext }) {
       }),
       h("div", { className: "cse-panel cse-controls" },
         h("label", { htmlFor: `${id}-horizon` }, "Calculation horizon (whole years, 1–30)"),
-        h("input", { id: `${id}-horizon`, type: "text", inputMode: "numeric", maxLength: 3, value: draft.horizon, "aria-invalid": !!errors.horizon, "aria-describedby": `${id}-hint${errors.horizon ? ` ${id}-horizon-error` : ""}`, onChange: (e: ChangeEvent<HTMLInputElement>) => { const horizon = e.currentTarget.value; setDraft((d) => ({ ...d, horizon })); } }),
+        h("input", { id: `${id}-horizon`, type: "text", inputMode: "numeric", maxLength: 3, value: draft.horizon, "aria-invalid": !!errors.horizon, "aria-describedby": `${id}-hint${errors.horizon ? ` ${id}-horizon-error` : ""}`, onChange: (e: ChangeEvent<HTMLInputElement>) => { const horizon = e.currentTarget.value; clearExport(); setDraft((d) => ({ ...d, horizon })); } }),
         errors.horizon && h("p", { id: `${id}-horizon-error`, className: "cse-error" }, errors.horizon),
         h("p", null, `${draft.actions.filter((a) => a.included).length} explicitly included; ${draft.actions.filter((a) => !a.included).length} excluded.`),
         (errors.form || (submitted && !validation.ok)) && h("p", { className: "cse-error", role: "alert" }, errors.form ?? "Check the highlighted financial inputs and basis notes. No new estimate was calculated."),
         h("div", { className: "cse-buttons" }, h("button", { type: "submit", className: "button button-primary" }, latest ? "Recalculate estimate" : "Calculate estimate"),
-          h("button", { type: "button", className: "button button-secondary", onClick: () => { setDraft(createEstimateDraft(context)); setLatest(null); setPrevious(null); setCalculatedDraft(null); setSubmitted(false); } }, "Reset financial inputs")))),
+          h("button", { type: "button", className: "button button-secondary", onClick: () => { setDraft(createEstimateDraft(context)); setLatest(null); setPrevious(null); setCalculatedDraft(null); setSubmitted(false); clearExport(); } }, "Reset financial inputs")))),
     h("div", { "aria-live": "polite", "aria-atomic": true }, dirty ? h("p", { className: "cse-warning", role: "status" }, "Inputs changed — recalculation required. Previous totals are hidden until you calculate again.") : latest && h(EstimateSummary, { result: latest, title: "Current illustrative estimate" })),
+    !dirty && exportPermit && exportAuthorized && h(CSEDownloadControls, { key: calculatedDraft, permit: exportPermit, context, draft, authorized: exportAuthorized }),
     !dirty && latest?.status !== "invalid" && previous && h(EstimateSummary, { result: previous, title: "Previous calculation — previous visitor assumptions" }),
     h("p", { className: "cse-muted" }, "Financial assumptions are separate from AI recommendations and visitor disposition overrides. License financial aggregation remains withheld. No unrelated AI calls are made. This is an illustrative, undiscounted estimate, not a forecast, formal approval or verified saving."));
+}
+
+function CSEDownloadControls({ permit, context, draft, authorized }: { permit: CSEExportPermit; context: CSEContext; draft: EstimateDraft; authorized: boolean }) {
+  const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
+  function download(format: CSEExportFormat) {
+    const result = downloadCSEEstimate(permit, context, draft, authorized, format);
+    setNotice({ ok: result.ok, message: result.ok ? `Download initiated (${format.toUpperCase()}). Browser saving is not confirmed.` : result.message });
+  }
+  return h("div", { className: "cse-panel", "aria-label": "Download current illustrative estimate" },
+    h("p", { className: "cse-muted" }, "Download only the current calculated estimate. Incomplete coverage and unknown values remain explicit. Previous comparison results are not downloadable."),
+    h("div", { className: "cse-buttons" }, ...(["json", "csv"] as const).map((format) => h("button", { key: format, className: "button button-secondary", type: "button", onClick: () => download(format) }, `Download estimate ${format.toUpperCase()}`))),
+    notice && h("p", { className: notice.ok ? "cse-muted" : "cse-error", role: notice.ok ? "status" : "alert" }, notice.message));
 }
 
 export function EstimateSummary({ result, title }: { result: CSEResult; title: string }) {

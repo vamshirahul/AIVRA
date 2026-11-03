@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+.scenario-provenance { margin-block: 18px; }
+.scenario-provenance dl { margin-block: 14px; }
+.scenario-provenance dl > div { display: grid; grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr); gap: 12px; padding-block: 6px; border-bottom: 1px solid var(--border); }
+.scenario-provenance dt { font-weight: 600; }
+.scenario-provenance dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) { .scenario-provenance dl > div { grid-template-columns: minmax(0, 1fr); gap: 3px; } }
+
 .scenario-compare-controls { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; }
 .scenario-comparison-table { width: 100%; border-collapse: collapse; margin-block: 18px; font-size: 12px; }
 .scenario-comparison-table caption { text-align: start; color: var(--muted); padding-block: 10px; }

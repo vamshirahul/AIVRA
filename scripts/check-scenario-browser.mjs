@@ -16,8 +16,10 @@ if (process.argv.includes("--render")) {
   let raw = ""; for await (const chunk of process.stdin) raw += chunk; const props = JSON.parse(raw); globalThis.fetch = () => { throw Error("Offline SSR forbids network"); }; process.stdout.write(renderToStaticMarkup(h(props.comparison ? ScenarioComparisonView : props.source ? ScenarioEditor : ScenarioEmptyState, props))); process.exit(0);
 }
 assert.ok(process.env.AIVRA_CHROMIUM_PATH, "Set installed AIVRA_CHROMIUM_PATH");
-const comparisonChecks = process.env.AIVRA_SCENARIO_COMPARE_BROWSER === "1";
-const fixture = JSON.parse(await readFile(".temp/u11-01/fixture.json", "utf8")), output = comparisonChecks ? ".temp/u11-02" : ".temp/u11-01"; await mkdir(output, { recursive: true });
+const exportChecks = process.env.AIVRA_SCENARIO_EXPORT_BROWSER === "1";
+const comparisonChecks = exportChecks || process.env.AIVRA_SCENARIO_COMPARE_BROWSER === "1";
+const fixture = JSON.parse(await readFile(".temp/u11-01/fixture.json", "utf8")), output = exportChecks ? ".temp/u11-03" : comparisonChecks ? ".temp/u11-02" : ".temp/u11-01"; await mkdir(output, { recursive: true });
+const downloadDirectory = exportChecks ? await mkdtemp(path.resolve(output, "downloads-")) : null;
 const modules = [], ids = new Map();
 function bundleModule(file, source) {
   if (ids.has(file)) return ids.get(file); const id = modules.length; ids.set(file, id); modules.push(""); let code = source ?? readFileSync(file, "utf8");
@@ -30,6 +32,7 @@ import {createElement as h,useState} from 'react';import {createRoot} from 'reac
 import {DemoSessionProvider,useDemoSession} from '../../components/demo-session-provider.tsx';
 import {ScenarioWorkspace} from '../../components/scenario-modeling/scenario-workspace.ts';import {SESSION_STORAGE_KEY} from '../../lib/session/session.ts';
 const fixture=${JSON.stringify(fixture)};sessionStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(fixture.session));
+${exportChecks ? "window.offlineDownloads=[];const create=URL.createObjectURL.bind(URL);URL.createObjectURL=(blob)=>{window.offlineDownloads.push(blob);return create(blob);};" : ""}
 function Harness(){const state=useDemoSession();const [source,setSource]=useState(fixture.source);const [current,setCurrent]=useState(true);window.offlineScenario={state,source,setSource,setCurrent};return h(ScenarioWorkspace,{source,current});}
 createRoot(document.getElementById('root')).render(h(DemoSessionProvider,null,h(Harness)));`);
 const bundle = `(()=>{const process={env:{NODE_ENV:'production'}},m=[${modules.join(",")}],c={};function __r(i){if(c[i])return c[i].exports;const x=c[i]={exports:{}};m[i](x,x.exports,__r);return x.exports}__r(${entry});})();`;
@@ -38,12 +41,13 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 const server = createServer((req, res) => { if (req.url === "/bundle.js") { res.setHeader("content-type", "text/javascript"); res.end(bundle); } else if (req.url === "/") { res.setHeader("content-type", "text/html"); res.end(html); } else { res.statusCode = 404; res.end(); } }); await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const url = `http://127.0.0.1:${server.address().port}/`, profile = await mkdtemp(path.join(tmpdir(), "aivra-scenario-"));
 const browser = spawn(process.env.AIVRA_CHROMIUM_PATH, ["--headless", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true });
-const evidence = { checks: [], runtimeErrors: [], externalRequests: [], screenshots: [], limitation: "Fabricated populated loopback harness only; public page is unavailable. Keyboard/DOM/AX/headless viewport checks, not a physical-device or full screen-reader/WCAG audit." };
+const evidence = { checks: [], runtimeErrors: [], externalRequests: [], screenshots: [], downloads: [], limitation: "Fabricated populated loopback harness only; public page is unavailable. Keyboard/DOM/AX/headless viewport checks, not a physical-device or full screen-reader/WCAG audit." };
+const downloads = [], completedDownloads = new Set();
 let socket, serial = 0; const pending = new Map();
 try {
   const endpoint = await new Promise((resolve, reject) => { let stderr = ""; const timer = setTimeout(() => reject(Error("Browser startup timeout")), 15000); browser.once("error", reject); browser.stderr.on("data", (chunk) => { stderr += chunk; const match = stderr.match(/DevTools listening on (ws:\/\/[^\s]+)/); if (match) { clearTimeout(timer); resolve(match[1]); } }); });
   socket = new WebSocket(endpoint); await new Promise((resolve, reject) => { socket.addEventListener("open", resolve, { once: true }); socket.addEventListener("error", reject, { once: true }); });
-  socket.addEventListener("message", ({ data }) => { const message = JSON.parse(data); if (message.method === "Runtime.exceptionThrown") evidence.runtimeErrors.push(message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text); if (message.method === "Runtime.consoleAPICalled" && message.params.type === "error") evidence.runtimeErrors.push(message.params.args.map((a) => a.description ?? a.value).join(" ")); if (message.method === "Network.requestWillBeSent" && /^https?:/.test(message.params.request.url) && !/^http:\/\/(127\.0\.0\.1|localhost):/.test(message.params.request.url)) evidence.externalRequests.push(message.params.request.url); if (!message.id) return; const w = pending.get(message.id); if (!w) return; pending.delete(message.id); clearTimeout(w.timer); if (message.error) w.reject(Error(JSON.stringify(message.error))); else w.resolve(message.result); });
+  socket.addEventListener("message", ({ data }) => { const message = JSON.parse(data); if (message.method === "Browser.downloadWillBegin") downloads.push(message.params); if (message.method === "Browser.downloadProgress" && message.params.state === "completed") completedDownloads.add(message.params.guid); if (message.method === "Runtime.exceptionThrown") evidence.runtimeErrors.push(message.params.exceptionDetails.exception?.description ?? message.params.exceptionDetails.text); if (message.method === "Runtime.consoleAPICalled" && message.params.type === "error") evidence.runtimeErrors.push(message.params.args.map((a) => a.description ?? a.value).join(" ")); if (message.method === "Network.requestWillBeSent" && /^https?:/.test(message.params.request.url) && !/^http:\/\/(127\.0\.0\.1|localhost):/.test(message.params.request.url)) evidence.externalRequests.push(message.params.request.url); if (!message.id) return; const w = pending.get(message.id); if (!w) return; pending.delete(message.id); clearTimeout(w.timer); if (message.error) w.reject(Error(JSON.stringify(message.error))); else w.resolve(message.result); });
   function send(method, params = {}, sessionId) { return new Promise((resolve, reject) => { const id = ++serial, timer = setTimeout(() => { pending.delete(id); reject(Error(`Timeout ${method}`)); }, 20000); pending.set(id, { resolve, reject, timer }); socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) })); }); }
   const { targetId } = await send("Target.createTarget", { url: "about:blank" }), { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true }); const page = (method, params) => send(method, params, sessionId);
   async function evaluate(expression) { const r = await page("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw Error(JSON.stringify(r.exceptionDetails)); return r.result.value; }
@@ -51,6 +55,19 @@ try {
   async function key(name, code, modifiers = 0) { for (const type of ["keyDown", "keyUp"]) await page("Input.dispatchKeyEvent", { type, key: name, code: name, windowsVirtualKeyCode: code, modifiers, ...(name === "Enter" && type === "keyDown" ? { text: "\r" } : {}) }); }
   async function click(text) { await waitFor(`[...document.querySelectorAll('button')].some(b=>b.textContent===${JSON.stringify(text)})`); await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent===${JSON.stringify(text)}).focus()`); await key("Enter", 13); }
   async function enter(selector, text) { await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`); await key("a", 65, 2); await key("Backspace", 8); if (text) await page("Input.insertText", { text }); }
+  const enabledDownloads = () => evaluate("[...document.querySelectorAll('button')].filter(b=>b.textContent.startsWith('Download scenario')&&!b.disabled).length");
+  async function downloaded(index, format) {
+    for (let n = 0; n < 200; n++) {
+      if (downloads[index] && completedDownloads.has(downloads[index].guid)) {
+        const name = `aivra-scenario-comparison-v1.${format}`; assert.equal(downloads[index].suggestedFilename, name);
+        const saved = await readFile(path.join(downloadDirectory, name), "utf8"), blob = await evaluate(`(async()=>{const b=window.offlineDownloads[${index}];return {type:b.type,text:await b.text()}})()`);
+        assert.equal(saved, blob.text); assert.equal(blob.type, format === "json" ? "application/json;charset=utf-8" : "text/csv;charset=utf-8"); assert.ok(Buffer.byteLength(saved, "utf8") <= 1500000);
+        evidence.downloads.push({ filename: name, mime: blob.type, bytes: Buffer.byteLength(saved, "utf8"), path: path.join(downloadDirectory, name) }); return saved;
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    throw Error("Scenario download completion timeout");
+  }
   async function screenshot(name, width) {
     await page("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: false });
     await evaluate("new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))");
@@ -63,10 +80,16 @@ try {
   }
   const alt = "document.querySelector('[aria-label=\"Single alternative scenario\"]')";
   await page("Page.enable"); await page("Runtime.enable"); await page("Network.enable"); await page("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
+  if (exportChecks) await send("Browser.setDownloadBehavior", { behavior: "allow", downloadPath: downloadDirectory, eventsEnabled: true });
   await page("Page.navigate", { url }); await waitFor("[...document.querySelectorAll('button')].some(b=>b.textContent==='Clone baseline')"); assert.equal(await evaluate(`${alt}!==null`), false);
   const originalSource = await evaluate("JSON.stringify(window.offlineScenario.source)"), originalStorage = await evaluate("JSON.stringify({...sessionStorage})");
   await click("Clone baseline"); await waitFor(`${alt}!==null`); assert.equal(await evaluate("[...document.querySelectorAll('button')].filter(b=>b.textContent==='Clone baseline').length"), 0);
   if (comparisonChecks) { await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')!==null"); assert.ok(await evaluate("document.querySelector('.scenario-comparison-table').textContent.includes('+CAD 0.00')")); }
+  if (exportChecks) {
+    assert.equal(await enabledDownloads(), 2); await click("Download scenario JSON"); const saved = JSON.parse(await downloaded(0, "json"));
+    assert.equal(saved.contract_version, "scenario/comparison-export/v1"); assert.equal(saved.scenario.baseline.actions[0].origin, "visitor_override"); assert.equal(saved.scenario.alternative.action_edits.length, 0); assert.equal(saved.comparison.baseline_result.context.reviewed.analysis.metadata.model_id, fixture.source.context.reviewed.analysis.metadata.model_id); assert.deepEqual(saved.comparison.source_binding.source, fixture.source.context.source); assert.equal(saved.comparison.differences.annual_recurring_savings_minor.amount_minor, 0);
+    assert.ok(await evaluate("document.activeElement.textContent==='Download scenario JSON'"));
+  }
   assert.equal(await evaluate("document.querySelectorAll('.scenario-baseline input,.scenario-baseline select,.scenario-baseline textarea').length"), 0); const baseline = await evaluate("document.querySelector('.scenario-baseline').textContent");
   assert.ok(baseline.includes("Original AI: Needs Review")); assert.ok(baseline.includes("Reviewed baseline: Retire"));
   await evaluate("document.querySelector('.scenario-action summary').focus()"); await key("Enter", 13);
@@ -74,6 +97,7 @@ try {
   await evaluate(`document.querySelector('${action} select').focus()`); await key("Home", 36); await key("ArrowDown", 40); await key("ArrowDown", 40); await key("Tab", 9);
   await enter(`${action} textarea`, "Fabricated scenario justification");
   await click("Save action hypothesis"); await waitFor("[...document.querySelectorAll('[role=alert]')].some(e=>e.textContent.includes('Select a destination'))");
+  if (exportChecks) { assert.equal(await enabledDownloads(), 0); assert.ok(await evaluate("document.body.textContent.includes('downloads revoked')")); }
   await evaluate(`document.querySelectorAll('${action} select')[1].focus()`); await key("Home", 36); await key("ArrowDown", 40); await key("Tab", 9);
   await enter(`${action} textarea`, "Fabricated scenario justification"); await click("Save action hypothesis"); await waitFor("document.querySelector('.scenario-action summary').textContent.includes('edited hypothesis')");
   assert.ok(await evaluate("document.activeElement.matches('.scenario-action summary')"));
@@ -84,14 +108,21 @@ try {
   await enter(`${finances} input[type=text]`, "0.00"); await enter(`${finances} textarea`, "Explicit invented zero basis"); await click("Save financial assumptions");
   await waitFor(`${alt}.textContent.includes('1 financial rows changed')`); assert.ok(await evaluate("document.activeElement.matches('.scenario-action summary')"));
   if (comparisonChecks) { await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')!==null"); assert.ok(await evaluate("document.querySelector('.scenario-comparison-table').textContent.includes('−CAD 300.00')")); }
+  if (exportChecks) { await click("Download scenario CSV"); const saved = await downloaded(1, "csv"); assert.ok(saved.includes('"-30000"')); assert.ok(saved.includes('"-5000"')); assert.ok(saved.includes("Explicit invented zero basis")); assert.ok(saved.includes("hypothetical_not_ai_generated")); assert.ok(saved.includes("offline-scenario")); }
   await evaluate(`document.querySelector('${finances} input[type=checkbox]').focus()`); await key(" ", 32); await click("Save financial assumptions"); assert.equal(await evaluate(`document.querySelector('${finances} input[type=checkbox]').checked`), false);
   if (comparisonChecks) {
     await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')?.textContent.includes('not computable')"); assert.ok(await evaluate("document.querySelector('.scenario-comparison-table').textContent.includes('Unknown / Not computable')"));
+    if (exportChecks) { assert.equal(await enabledDownloads(), 0); assert.ok(await evaluate("document.body.textContent.includes('not-computable results cannot be downloaded')")); }
     await evaluate(`document.querySelector('${finances} input[type=checkbox]').focus()`); await key(" ", 32); await enter(`${finances} input[type=text]`, "200"); await click("Save financial assumptions");
   }
   const horizon = ".scenario-panel[aria-label='Single alternative scenario'] > form input[type=text]";
   await enter(horizon, "5"); await click("Save alternative horizon"); await waitFor(`document.querySelector(${JSON.stringify(horizon)}).value==='5'`);
   if (comparisonChecks) { await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison-table')?.textContent.includes('Not comparable')"); assert.ok(await evaluate("document.querySelector('.scenario-comparison').textContent.includes('Different or unknown horizons')")); }
+  if (exportChecks) {
+    await click("Download scenario JSON"); const saved = JSON.parse(await downloaded(2, "json")); assert.equal(saved.comparison.status, "incomplete"); assert.equal(saved.comparison.differences.illustrative_net_benefit_minor.amount_minor, null); assert.equal(saved.comparison.differences.illustrative_net_benefit_minor.reason, "different_horizon"); assert.equal(saved.scenario.alternative.action_edits[0].scenario_reason, "Fabricated scenario justification");
+    await evaluate("document.querySelector('.scenario-provenance summary').focus()"); await key("Enter", 13); assert.ok(await evaluate("document.querySelector('.scenario-provenance').open"));
+    assert.ok(await evaluate("document.querySelector('.scenario-provenance').textContent.includes('offline-scenario')"));
+  }
   assert.equal(await evaluate("document.querySelector('.scenario-baseline').textContent"), baseline); assert.equal(await evaluate("JSON.stringify(window.offlineScenario.source)"), originalSource); assert.equal(await evaluate("JSON.stringify({...sessionStorage})"), originalStorage);
   const { nodes } = await page("Accessibility.getFullAXTree"); for (const name of ["Alternative disposition", "Scenario justification (required for a change)", "Save financial assumptions"]) assert.ok(nodes.some((n) => !n.ignored && n.name?.value === name), name);
   for (const width of [1440, 390, 320]) await screenshot("populated-offline", width);
@@ -99,21 +130,35 @@ try {
   await click("Reset alternative to baseline"); assert.equal(await evaluate("document.querySelectorAll('[aria-label=\"Single alternative scenario\"]').length"), 1); assert.equal(await evaluate(`document.querySelector(${JSON.stringify(horizon)}).value`), "3"); assert.equal(await evaluate("document.querySelector('.scenario-baseline').textContent"), baseline);
   if (comparisonChecks) {
     assert.equal(await evaluate("document.querySelector('.scenario-comparison')!==null"), false); await click("Compare scenarios"); await waitFor("document.querySelector('.scenario-comparison')!==null");
+    if (exportChecks) {
+      const note = await evaluate(`document.querySelector('${finances} textarea').value`); await enter(`${finances} textarea`, "Unsaved reverted note"); assert.equal(await enabledDownloads(), 0); await enter(`${finances} textarea`, note); assert.equal(await enabledDownloads(), 0); assert.ok(await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Compare scenarios').disabled")); await click("Restore baseline financial inputs"); assert.equal(await enabledDownloads(), 0); await click("Compare scenarios"); assert.equal(await enabledDownloads(), 2);
+    }
     await enter(`${finances} textarea`, "Unsaved basis"); assert.equal(await evaluate("document.querySelector('.scenario-comparison')!==null"), false); await click("Reset alternative to baseline"); assert.equal(await evaluate(`document.querySelector('${finances} textarea').value`), "Fabricated explicit annual basis"); await click("Compare scenarios");
     evidence.checks.push("Explicit Compare/recompare, disposition-only zero deltas/unpriced disclosure, unsaved/invalid/changed/reset hiding, negative net and signed differences, unavailable excluded totals, mismatched-horizon withholding and reset of unsaved forms verified.");
   }
-  evidence.checks.push("Keyboard Clone creates exactly one alternative; original AI/baseline visitor/scenario layers separated; missing destination and negative amount rejected, action/zero-money/horizon saves, restores/reset/focus and source/baseline/storage isolation verified; no scenario export.");
+  evidence.checks.push("Keyboard Clone creates exactly one alternative; original AI/baseline visitor/scenario layers separated; missing destination and negative amount rejected, action/zero-money/horizon saves, restores/reset/focus and source/baseline/storage isolation verified.");
+  if (exportChecks) evidence.checks.push("Three actual keyboard downloads verified on disk against Blob bytes, MIME and fixed filenames; original layers/provenance, negative metrics and incompatible-horizon qualifications preserved. Dirty/reverted notes, failed Save, reset/restore and not-computable results revoke downloads; explicit Compare alone re-captures.");
   await evaluate("window.offlineScenario.state.updateTSA(window.offlineScenario.state.session.current_deal.tsa_services[0].tsa_id,{title:'Offline TSA only'})"); assert.ok(await evaluate(`${alt}!==null`));
   if (comparisonChecks) assert.ok(await evaluate("document.querySelector('.scenario-comparison')!==null"));
   await evaluate("window.offlineScenario.setSource({...window.offlineScenario.source,financial_draft:{...window.offlineScenario.source.financial_draft,horizon:'5'}})"); await waitFor(`${alt}===null`); await click("Clone baseline"); await waitFor(`${alt}!==null`);
+  if (exportChecks) { assert.equal(await enabledDownloads(), 0); await click("Compare scenarios"); assert.equal(await enabledDownloads(), 2); }
   await evaluate("window.offlineScenario.state.updateLicense(window.offlineScenario.state.session.current_deal.license_positions[0].license_id,{notes:'Offline license change'})"); await waitFor(`${alt}===null`); assert.equal(await evaluate("[...document.querySelectorAll('button')].some(b=>b.textContent==='Clone baseline')"), false);
+  if (exportChecks) { assert.equal(await enabledDownloads(), 0); assert.ok(await evaluate("document.body.textContent.includes('Stale or unverified baseline')")); }
   await page("Page.reload"); await waitFor("[...document.querySelectorAll('button')].some(b=>b.textContent==='Clone baseline')"); assert.equal(await evaluate(`${alt}!==null`), false);
-  await click("Clone baseline"); await evaluate("window.offlineScenario.setCurrent(false)"); await waitFor(`${alt}===null`); await evaluate("window.offlineScenario.setCurrent(true)"); await waitFor("[...document.querySelectorAll('button')].some(b=>b.textContent==='Clone baseline')");
+  await click("Clone baseline");
+  if (exportChecks) {
+    await click("Compare scenarios"); assert.equal(await enabledDownloads(), 2);
+    await evaluate("document.querySelector('.scenario-action summary').open=true;document.querySelector('.scenario-action').open=true"); await enter(`${finances} input[type=text]`, "10000000000"); await click("Save financial assumptions"); assert.equal(await enabledDownloads(), 0); await click("Compare scenarios"); assert.equal(await enabledDownloads(), 0); assert.equal(await evaluate("document.querySelector('.scenario-comparison')!==null"), false);
+    await click("Restore baseline financial inputs"); await click("Compare scenarios"); assert.equal(await enabledDownloads(), 2);
+  }
+  await evaluate("window.offlineScenario.setCurrent(false)"); await waitFor(`${alt}===null`); await evaluate("window.offlineScenario.setCurrent(true)"); await waitFor("[...document.querySelectorAll('button')].some(b=>b.textContent==='Clone baseline')");
+  if (exportChecks) assert.equal(await enabledDownloads(), 0);
   evidence.checks.push("TSA-only retains scenario; changed current CSE assumptions clear it; license change removes clone/editor, refresh/currentness revocation discard all transient edits.");
   assert.ok(process.env.AIVRA_BASE_URL, "Set local public AIVRA_BASE_URL"); await page("Page.navigate", { url: `${process.env.AIVRA_BASE_URL}/scenario-modeling` }); await waitFor("document.querySelector('h1')?.textContent==='Scenario / What-if Modeling' && document.querySelector('[aria-label=\"Scenario readiness\"]')!==null");
   assert.ok(await evaluate("document.querySelector('.scenario-workspace').textContent.includes('No validated reviewed ALA/CSE baseline available')")); assert.equal(await evaluate("document.querySelectorAll('.scenario-workspace button,.scenario-workspace input,.scenario-workspace select').length"), 0); assert.equal(await evaluate("document.querySelectorAll('.scenario-links a').length"), 2);
+  if (exportChecks) { assert.equal(await enabledDownloads(), 0); assert.equal(downloads.length, 3); }
   for (const width of [1440, 390, 320]) await screenshot("public-empty", width);
   await evaluate("document.querySelector('.scenario-links a').focus()"); await key("Enter", 13); await waitFor("location.pathname==='/application-rationalization'");
   assert.deepEqual(evidence.runtimeErrors, []); assert.deepEqual(evidence.externalRequests, []); evidence.checks.push("Real public unavailable state has prerequisite links and no populated clone/edit/metric/export controls; 1440/390/320 no page overflow; zero runtime/console errors/external page requests.");
-  await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2) + "\n"); console.log(`PASS: ${evidence.checks.length} ${comparisonChecks ? "U11.02" : "U11.01"} browser groups, six screenshots; evidence ${output}/browser-checks.json`); await send("Browser.close");
+  await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2) + "\n"); console.log(`PASS: ${evidence.checks.length} ${exportChecks ? "U11.03" : comparisonChecks ? "U11.02" : "U11.01"} browser groups, six screenshots; evidence ${output}/browser-checks.json`); await send("Browser.close");
 } finally { socket?.close(); browser.kill(); server.close(); }

@@ -13,9 +13,11 @@ export function validateInvocation<T>(request: InvocationInput, contract: Output
     if (Buffer.byteLength(serialized, "utf8") > MAX_INPUT_BYTES) return { ok: false, code: "request_too_large" as FailureCode } as const;
     const parsed = InvocationSchema.safeParse(request);
     if (!parsed.success) return { ok: false, code: (parsed.error.issues.some((issue) => issue.code === "too_big") ? "request_too_large" : "invalid_input") as FailureCode } as const;
+    if (request.module === "playbook" && !isDeepStrictEqual(parsed.data, request)) return { ok: false, code: "invalid_input" as FailureCode } as const;
     if (!(contract?.schema instanceof z.ZodType) || typeof contract.references?.extract !== "function") return { ok: false, code: "invalid_input" as FailureCode } as const;
     const policy = ReferencePolicySchema.safeParse({ allow_empty: contract.references.allow_empty, duplicates: contract.references.duplicates });
     if (!policy.success) return { ok: false, code: "invalid_input" as FailureCode } as const;
+    if (request.module === "playbook" && Buffer.byteLength(JSON.stringify({ input: parsed.data, schema: z.toJSONSchema(contract.schema) }), "utf8") > MAX_INPUT_BYTES) return { ok: false, code: "request_too_large" as FailureCode } as const;
     return { ok: true, input: parsed.data, references: policy.data } as const;
   } catch { return { ok: false, code: "invalid_input" as FailureCode } as const; }
 }

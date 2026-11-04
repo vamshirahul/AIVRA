@@ -28,9 +28,10 @@ const seedJSON = serializeSession(seed);
 const keyLiteral = JSON.stringify(SESSION_STORAGE_KEY);
 const evidence = { checks: [], runtimeErrors: [], limitations: "Focused Chromium keyboard/DOM/AX checks; no full WCAG or physical-device test. Browser input is seeded through the real validated controller; no production test globals." };
 const tsaEditChecks = process.argv.includes("--tsa-edit-browser");
+const playbookChecks = process.argv.includes("--playbook-browser");
 const tsaExportChecks = process.argv.includes("--tsa-export-browser");
-const tsaChecks = tsaExportChecks || tsaEditChecks || process.argv.includes("--tsa-browser");
-const output = tsaExportChecks ? ".temp/u07-03" : tsaEditChecks ? ".temp/u07-02" : tsaChecks ? ".temp/u07-01" : "artifacts/u00-05";
+const tsaChecks = playbookChecks || tsaExportChecks || tsaEditChecks || process.argv.includes("--tsa-browser");
+const output = playbookChecks ? ".temp/u04-02" : tsaExportChecks ? ".temp/u07-03" : tsaEditChecks ? ".temp/u07-02" : tsaChecks ? ".temp/u07-01" : "artifacts/u00-05";
 const downloads = [], completedDownloads = new Set();
 await mkdir(output, { recursive: true });
 const profile = await mkdtemp(path.join(tmpdir(), "aivra-u05-chromium-"));
@@ -102,7 +103,10 @@ try {
   }
   await page("Page.enable"); await page("Runtime.enable");
   if (tsaChecks) {
-    if (tsaExportChecks) {
+    if (playbookChecks) {
+      const { checkPlaybookBrowser } = await import("./check-playbook-action.mts");
+      await checkPlaybookBrowser({ page, evaluate, waitFor, load, key, base, output, evidence });
+    } else if (tsaExportChecks) {
       const { checkTSAExportHealthBrowser } = await import("./check-tsa-export-health.mts");
       await checkTSAExportHealthBrowser({ page, send, evaluate, waitFor, load, key, base, output, evidence, downloads, completedDownloads });
     } else if (tsaEditChecks) {
@@ -114,7 +118,7 @@ try {
     }
     assert.deepEqual(evidence.runtimeErrors, []);
     await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2) + "\n");
-    console.log(`PASS: ${evidence.checks.length} ${tsaExportChecks ? "U07.03" : tsaEditChecks ? "U07.02" : "U07.01"} browser groups; public TSA workflow, source identity, keyboard/viewport and session lifecycle.`);
+    console.log(`PASS: ${evidence.checks.length} ${playbookChecks ? "U04.02" : tsaExportChecks ? "U07.03" : tsaEditChecks ? "U07.02" : "U07.01"} browser groups; public workflow, keyboard/viewport and session lifecycle.`);
   } else {
   await page("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await load("Page.navigate", { url: base });

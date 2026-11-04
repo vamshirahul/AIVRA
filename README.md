@@ -50,7 +50,8 @@ read-only Buyer/Target application inventory preview; Application Rationalizatio
 has a readiness-only Analyze action, License Optimizer shows the shared read-only
 license inventory, TSA Tracker shows current linked synthetic services, and Cost
 Synergy and Scenario Modeling have readiness workspaces.
-The other three business pages remain introductions. Live AI
+Integration Health shows current TSA source counts; its other sections and the
+Playbook/Assistant pages remain introductions. Live AI
 remains disabled.
 
 | Group | Page | Route |
@@ -236,8 +237,8 @@ service/provider/recipient/owner, exact ISO dates, source statuses, exit milesto
 risk notes and linked application IDs, Buyer/Target sides and current names.
 Unknown fields stay unknown; omitted relationship information differs from an empty
 link list. The accessible table scrolls within its region on smaller screens.
-U07.02 below adds session interactions; no date-derived risk, exports or dashboard
-publication. No AI, new dependencies or new persistence. Run `npm run check:tsa-inventory`
+U07.02 below adds session interactions; U07.03 adds source exports and TSA counts.
+No date-derived risk, AI, new dependencies or new persistence. Run `npm run check:tsa-inventory`
 (also in `check:ci`). Optional Chromium: `node scripts/check-demo-session-browser.mjs
 --tsa-browser` with `AIVRA_CHROMIUM_PATH` and local `AIVRA_BASE_URL`.
 See the [view contract](docs/contracts/U07.01_TSA_Inventory_View_Contract.md) and
@@ -256,11 +257,29 @@ source/revisions. Reset discards drafts and restores the sample. Status filters 
 temporary and do not mutate records. Date/milestone attention compares known ISO
 dates to the displayed UTC reference, without thresholds, risk inference or status
 transitions. Existing browser storage failures retain memory-only work with a notice.
-No deletion, exports, dashboard integration, live AI or new dependencies. Run
+U07.03 below adds exports and TSA dashboard counts. No deletion, live AI or new dependencies. Run
 `npm run check:tsa-edit` (also in `check:ci`), and optional Chromium
 `node scripts/check-demo-session-browser.mjs --tsa-edit-browser`.
 See the [U07.02 contract](docs/contracts/U07.02_TSA_Edit_Status_Filter_Contract.md)
 and [validation evidence](U07.02_VALIDATION.md).
+
+## TSA summary exports and Integration Health counts (U07.03 — in review)
+
+Download the **entire saved TSA inventory as CSV or JSON**, independent of the status
+filter. Exact source fields/IDs/statuses/dates/nulls/relationship distinctions and
+current linked app names/sides are retained, with session/source revisions and a
+synthetic/unapproved disclosure. Open Add/Edit drafts disable downloads. Every click
+reads and validates the latest controller snapshot and rechecks it before dispatch;
+invalid, changed or over-limit sources produce no partial file. Both complete files
+are bounded to 512,000 UTF-8 bytes; CSV protects formula-like text.
+`/integration-health` displays Total, Planned, Active, At Risk and Completed from all
+current saved records. Counts follow creation/status changes and Reset; unavailable
+source is not zero. Broader health metrics remain planned, with no derived-result
+registration, score, predicted risk, live AI or new persistence/dependencies.
+Run `npm run check:tsa-export-health` (also in `check:ci`); optional Chromium:
+`node scripts/check-demo-session-browser.mjs --tsa-export-browser`.
+See the [U07.03 contract](docs/contracts/U07.03_TSA_Export_Integration_Health_Contract.md)
+and [validation evidence](U07.03_VALIDATION.md).
 
 ## Selected license advisory handoff (U05.04 — in review)
 

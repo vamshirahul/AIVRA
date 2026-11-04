@@ -68,7 +68,7 @@ if (!process.argv.includes("--tsa-edit-browser")) {
       s.failStorage(); assert.ok(s.c.createTSA(input(), s.token()).ok); assert.equal(s.c.getSnapshot().storageAvailable, false); assert.equal(s.values.has(SESSION_STORAGE_KEY), false); assert.equal(s.current().current_deal.tsa_services.length, 7); assert.ok(DemoSessionSchema.safeParse(s.current()).success);
     });
     await check("public form boundary, original fixture/schema/security and no network/provider operations", async () => {
-      const code = await readFile("components/tsa-tracker/tsa-tracker.tsx", "utf8"); assert.match(code, /controller.getSnapshot\(\)/); assert.match(code, /controller.createTSA\(/); assert.match(code, /controller.updateTSA\(/); assert.doesNotMatch(code, /fetch\(|sessionStorage|localStorage|dangerouslySetInnerHTML|recordDerived|download|createObjectURL|Math\.round/); assert.equal(JSON.stringify(loadSyntheticDealFixture()), fixture); assert.equal(network, 0);
+      const code = await readFile("components/tsa-tracker/tsa-tracker.tsx", "utf8"); assert.match(code, /controller.getSnapshot\(\)/); assert.match(code, /controller.createTSA\(/); assert.match(code, /controller.updateTSA\(/); assert.doesNotMatch(code, /fetch\(|sessionStorage|localStorage|dangerouslySetInnerHTML|recordDerived|createObjectURL|Math\.round/); assert.equal(JSON.stringify(loadSyntheticDealFixture()), fixture); assert.equal(network, 0);
     });
     console.log(`PASS: ${groups} U07.02 groups; TSA-CREATE-001, atomic edits/currentness, transparent attention and zero network/provider calls.`);
   } finally { globalThis.fetch = beforeFetch; }

@@ -201,6 +201,17 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .license-inventory-table th, .license-inventory-table td { white-space: pre-wrap; }
 .license-inventory-table td:nth-child(2) { min-width: 220px; }
 .tsa-inventory-table { min-width: 1850px; }
+.tsa-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-block: 16px; }
+.tsa-tracker label { display: block; font-size: 12px; font-weight: 600; margin-block: 8px; }
+.tsa-tracker :is(input[type="text"], textarea, select) { width: 100%; max-width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--foreground); padding: 10px; font: inherit; font-size: 12px; }
+.tsa-edit-panel { margin-block: 20px; padding: clamp(14px, 3vw, 24px); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow-wrap: anywhere; }
+.tsa-edit-panel h2 { font-weight: 650; margin-bottom: 12px; }
+.tsa-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 14px; }
+.tsa-form-grid > div { min-width: 0; }
+.tsa-help, .tsa-attention { font-size: 12px; color: var(--muted); margin-block: 8px; }
+.tsa-error { color: var(--warning); font-size: 12px; margin-block: 6px; }
+.tsa-application-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 8px; margin-block: 12px; }
+.tsa-application-choices label { display: flex; align-items: start; gap: 8px; overflow-wrap: anywhere; min-width: 0; }
 .tsa-inventory-table th, .tsa-inventory-table td { white-space: pre-wrap; }
 .tsa-inventory-table td:nth-child(2), .tsa-inventory-table td:nth-child(9), .tsa-inventory-table td:nth-child(10), .tsa-inventory-table td:nth-child(11) { min-width: 220px; }
 .inventory-loading, .inventory-empty { padding: 20px 0; color: var(--muted); }

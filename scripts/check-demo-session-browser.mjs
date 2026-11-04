@@ -27,8 +27,9 @@ seed.session_revision++;
 const seedJSON = serializeSession(seed);
 const keyLiteral = JSON.stringify(SESSION_STORAGE_KEY);
 const evidence = { checks: [], runtimeErrors: [], limitations: "Focused Chromium keyboard/DOM/AX checks; no full WCAG or physical-device test. Browser input is seeded through the real validated controller; no production test globals." };
-const tsaChecks = process.argv.includes("--tsa-browser");
-const output = tsaChecks ? ".temp/u07-01" : "artifacts/u00-05";
+const tsaEditChecks = process.argv.includes("--tsa-edit-browser");
+const tsaChecks = tsaEditChecks || process.argv.includes("--tsa-browser");
+const output = tsaEditChecks ? ".temp/u07-02" : tsaChecks ? ".temp/u07-01" : "artifacts/u00-05";
 await mkdir(output, { recursive: true });
 const profile = await mkdtemp(path.join(tmpdir(), "aivra-u05-chromium-"));
 const browser = spawn(process.env.AIVRA_CHROMIUM_PATH, ["--headless", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true });
@@ -97,11 +98,16 @@ try {
   }
   await page("Page.enable"); await page("Runtime.enable");
   if (tsaChecks) {
+    if (tsaEditChecks) {
+      const { checkTSAEditBrowser } = await import("./check-tsa-edit.mts");
+      await checkTSAEditBrowser({ page, evaluate, waitFor, load, key, base, output, evidence });
+    } else {
     const { checkTSAInventoryBrowser } = await import("./check-tsa-inventory.mts");
     await checkTSAInventoryBrowser({ page, evaluate, waitFor, load, key, base, output, evidence });
+    }
     assert.deepEqual(evidence.runtimeErrors, []);
     await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2) + "\n");
-    console.log(`PASS: ${evidence.checks.length} U07.01 browser groups; public inventory, source identity, keyboard/viewport, refresh/navigation/reset and empty state.`);
+    console.log(`PASS: ${evidence.checks.length} ${tsaEditChecks ? "U07.02" : "U07.01"} browser groups; public TSA workflow, source identity, keyboard/viewport and session lifecycle.`);
   } else {
   await page("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await load("Page.navigate", { url: base });

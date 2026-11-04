@@ -236,12 +236,31 @@ service/provider/recipient/owner, exact ISO dates, source statuses, exit milesto
 risk notes and linked application IDs, Buyer/Target sides and current names.
 Unknown fields stay unknown; omitted relationship information differs from an empty
 link list. The accessible table scrolls within its region on smaller screens.
-No date-derived risk, editing, status changes, filtering, exports or dashboard
-publication. No AI, new dependencies or persistence. Run `npm run check:tsa-inventory`
+U07.02 below adds session interactions; no date-derived risk, exports or dashboard
+publication. No AI, new dependencies or new persistence. Run `npm run check:tsa-inventory`
 (also in `check:ci`). Optional Chromium: `node scripts/check-demo-session-browser.mjs
 --tsa-browser` with `AIVRA_CHROMIUM_PATH` and local `AIVRA_BASE_URL`.
 See the [view contract](docs/contracts/U07.01_TSA_Inventory_View_Contract.md) and
 [validation evidence](U07.01_VALIDATION.md).
+
+## TSA session creation, editing and filtering (U07.02 — in review)
+
+Add TSA implements approved **TSA-CREATE-001**: a generated `tsa-${crypto.randomUUID()}`
+identity, required title/provider/recipient/explicit status, optional source fields
+and current application references, complete source/session validation and one atomic
+append/revision advance. Unknown relationship information differs from recorded empty
+links. Existing-record editing covers status, owner, dates, milestone and risk notes;
+IDs, title/provider/recipient and existing relationships remain read-only.
+Save checks the latest source and rejects stale drafts; Cancel/no-op Save preserve
+source/revisions. Reset discards drafts and restores the sample. Status filters are
+temporary and do not mutate records. Date/milestone attention compares known ISO
+dates to the displayed UTC reference, without thresholds, risk inference or status
+transitions. Existing browser storage failures retain memory-only work with a notice.
+No deletion, exports, dashboard integration, live AI or new dependencies. Run
+`npm run check:tsa-edit` (also in `check:ci`), and optional Chromium
+`node scripts/check-demo-session-browser.mjs --tsa-edit-browser`.
+See the [U07.02 contract](docs/contracts/U07.02_TSA_Edit_Status_Filter_Contract.md)
+and [validation evidence](U07.02_VALIDATION.md).
 
 ## Selected license advisory handoff (U05.04 — in review)
 

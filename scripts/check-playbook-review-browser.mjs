@@ -1,0 +1,90 @@
+// Offline-only React/browser harness, never a Next route/build/public entrypoint.
+import assert from "node:assert/strict";
+import { readFileSync, existsSync } from "node:fs";
+import { readFile, writeFile, mkdir, mkdtemp } from "node:fs/promises";
+import { createRequire } from "node:module";
+import path from "node:path";
+import { tmpdir } from "node:os";
+import { spawn } from "node:child_process";
+import { createServer } from "node:http";
+import ts from "typescript";
+
+assert.ok(process.env.AIVRA_CHROMIUM_PATH, "Set installed Chromium path");
+const output = ".temp/u04-03", fixture = JSON.parse(await readFile(`${output}/fixture.json`, "utf8"));
+const root = process.cwd(), modules = [], ids = new Map();
+function bundleModule(file, source) {
+  if (ids.has(file)) return ids.get(file); const id = modules.length; ids.set(file, id); modules.push("");
+  let code = source ?? readFileSync(file, "utf8");
+  code = file.endsWith(".json") ? `module.exports=${code};` : ts.transpileModule(code, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
+  code = code.replace(/require\(["']([^"']+)["']\)/g, (_, spec) => {
+    let resolved; if (spec.startsWith(".")) { const base = path.resolve(path.dirname(file), spec); resolved = [base, `${base}.ts`, `${base}.tsx`, `${base}.js`, `${base}.json`].find(p => existsSync(p) && path.extname(p)); }
+    resolved ??= createRequire(file).resolve(spec);
+    assert.ok(path.isAbsolute(resolved) && !resolved.replaceAll("\\", "/").includes("/lib/server/") && spec !== "server-only", `No server runtime in isolated bundle: ${spec}`);
+    return `__r(${bundleModule(resolved)})`;
+  }); modules[id] = `function(module,exports,__r){${code}\n}`; return id;
+}
+const entry = bundleModule(path.join(root, `${output}/offline-entry.tsx`), `
+import {createElement as h} from 'react';import {createRoot} from 'react-dom/client';
+import {DemoSessionProvider,useDemoSession} from '../../components/demo-session-provider.tsx';
+import {PlaybookReviewWorkspace} from '../../components/playbook-generator/playbook-review-workspace.tsx';
+import {SESSION_STORAGE_KEY} from '../../lib/session/session.ts';import {freezePlaybook} from '../../lib/playbook-generator/review-draft.ts';
+const fixture=freezePlaybook(${JSON.stringify(fixture)});sessionStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(fixture.session));
+let view=fixture.view;const listeners=new Set();const source={getSnapshot:()=>view,subscribe:n=>{listeners.add(n);return()=>listeners.delete(n);}};
+const publish=v=>{view=v;listeners.forEach(n=>n());};
+window.offlineReview={fetches:0,original:JSON.stringify(fixture.view),revoke:()=>publish(Object.freeze({state:'outdated'})),replace:()=>publish(fixture.replacementView)};
+window.fetch=()=>{window.offlineReview.fetches++;throw Error('Offline review never calls network');};
+function Harness(){const state=useDemoSession();window.offlineReview.state=state;window.offlineReview.readOriginal=()=>JSON.stringify(fixture.view);return h(PlaybookReviewWorkspace,{source});}
+createRoot(document.getElementById('root')).render(h(DemoSessionProvider,null,h(Harness)));
+`);
+const bundle = `(()=>{const process={env:{NODE_ENV:'production'}},m=[${modules.join(",")}],cache={};function __r(i){if(cache[i])return cache[i].exports;const x=cache[i]={exports:{}};m[i](x,x.exports,__r);return x.exports;}__r(${entry});})();`;
+let css = await readFile("app/globals.css", "utf8"); const font = css.match(/--font-sans:\s*([^;]+);/)[1];
+css = css.replace(/@import[^;]+;/g, "").replace(/@theme inline\s*\{[^}]+\}/g, "") + `:root{--font-sans:${font}}*,::before,::after{box-sizing:border-box}`;
+const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Fabricated offline Playbook review test</title><style>${css}body{padding:16px}#root{max-width:1180px;margin:auto}</style></head><body><p>Fabricated offline test only — not actual AI analysis or a public route</p><main id="root"></main><script src="/bundle.js"></script></body></html>`;
+const server = createServer((req, res) => { if (req.url === "/bundle.js") { res.setHeader("content-type", "text/javascript"); res.end(bundle); } else if (req.url === "/") { res.setHeader("content-type", "text/html"); res.end(html); } else { res.statusCode = 404; res.end(); } });
+await new Promise(resolve => server.listen(0, "127.0.0.1", resolve)); const offlineURL = `http://127.0.0.1:${server.address().port}/`;
+const profile = await mkdtemp(path.join(tmpdir(), "aivra-playbook-review-"));
+const browser = spawn(process.env.AIVRA_CHROMIUM_PATH, ["--headless", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true });
+const evidence = { checks: [], runtimeErrors: [], externalRequests: [], screenshots: [], limitations: "Isolated fabricated review only; normal app remains unavailable. Bounded keyboard/AX/DOM/viewport checks, not full WCAG/screen-reader or physical-device UAT." };
+let socket, serial = 0; const pending = new Map();
+try {
+  const endpoint = await new Promise((resolve, reject) => { let stderr = ""; const timer = setTimeout(() => reject(Error("Chrome timeout")), 15000); browser.once("error", reject); browser.stderr.on("data", chunk => { stderr += chunk; const match = stderr.match(/DevTools listening on (ws:\/\/[^\s]+)/); if (match) { clearTimeout(timer); resolve(match[1]); } }); });
+  socket = new WebSocket(endpoint); await new Promise((resolve, reject) => { socket.addEventListener("open", resolve, { once: true }); socket.addEventListener("error", reject, { once: true }); });
+  socket.addEventListener("message", ({ data }) => { const m = JSON.parse(data); if (m.method === "Runtime.exceptionThrown") evidence.runtimeErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text); if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") evidence.runtimeErrors.push(m.params.args.map(a => a.description ?? a.value).join(" ")); if (m.method === "Network.requestWillBeSent" && /^https?:/.test(m.params.request.url) && !/^http:\/\/(127\.0\.0\.1|localhost):/.test(m.params.request.url)) evidence.externalRequests.push(m.params.request.url); if (!m.id) return; const wait = pending.get(m.id); if (!wait) return; pending.delete(m.id); clearTimeout(wait.timer); m.error ? wait.reject(Error(JSON.stringify(m.error))) : wait.resolve(m.result); });
+  function send(method, params = {}, sessionId) { return new Promise((resolve, reject) => { const id = ++serial, timer = setTimeout(() => { pending.delete(id); reject(Error(method)); }, 15000); pending.set(id, { resolve, reject, timer }); socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) })); }); }
+  const { targetId } = await send("Target.createTarget", { url: "about:blank" }), { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true }); const page = (m, p) => send(m, p, sessionId);
+  async function evaluate(expression) { const r = await page("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw Error(JSON.stringify(r.exceptionDetails)); return r.result.value; }
+  async function waitFor(expression) { for (let i = 0; i < 180; i++) { if (await evaluate(expression)) return; await new Promise(r => setTimeout(r, 50)); } throw Error(`Timeout: ${expression}`); }
+  async function key(name, code, modifiers = 0) { for (const type of ["keyDown", "keyUp"]) await page("Input.dispatchKeyEvent", { type, key: name, code: name, windowsVirtualKeyCode: code, modifiers, ...(name === "Enter" && type === "keyDown" ? { text: "\r" } : {}) }); }
+  async function click(text) { await evaluate(`[...document.querySelectorAll('button')].find(e=>e.textContent===${JSON.stringify(text)}).focus()`); await key("Enter", 13); }
+  async function enter(name, text) { await evaluate(`document.querySelector('[name="${name}"]').focus()`); await key("a", 65, 2); await key("Backspace", 8); if (text) await page("Input.insertText", { text }); }
+  const rowText = (kind, id) => evaluate(`document.querySelector('[data-playbook-row="${kind}:${id}"]').textContent`);
+  async function screenshot(name) { const r = await page("Page.captureScreenshot", { format: "png", captureBeyondViewport: true }); await writeFile(`${output}/${name}.png`, Buffer.from(r.data, "base64")); evidence.screenshots.push(`${name}.png`); }
+  await page("Page.enable"); await page("Runtime.enable"); await page("Network.enable");
+  await page("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false }); await page("Page.navigate", { url: offlineURL }); await waitFor("!!document.querySelector('.playbook-review')");
+  const original = await evaluate("window.offlineReview.original"), sessionJSON = await evaluate("sessionStorage.getItem('aivra:r0:demo-session:v1')");
+  assert.match(await evaluate("document.body.textContent"), /Incomplete Playbook \/ evidence/); await click("Edit activity activity_0"); assert.equal(await evaluate("document.activeElement.name"), "title");
+  await enter("title", "Visitor proposed discovery"); assert.equal(await evaluate("document.querySelector('button[type=submit]').disabled"), true); assert.equal(await evaluate("document.querySelector('[name=visitor_reason]').getAttribute('aria-invalid')"), "true");
+  await enter("visitor_reason", "Offline visitor justification"); await click("Save visitor edit"); await waitFor("!document.querySelector('form')"); assert.match(await rowText("activity", "activity_0"), /Visitor proposed discovery/); assert.match(await rowText("activity", "activity_0"), /Original title: Fabricated discovery activity/); assert.equal(await evaluate("document.activeElement.textContent"), "Edit activity activity_0");
+  await click("Edit activity activity_0"); await enter("title", "Unsaved discarded title"); await click("Cancel edit"); assert.ok(!(await rowText("activity", "activity_0")).includes("Unsaved discarded")); assert.equal(await evaluate("document.activeElement.textContent"), "Edit activity activity_0");
+  await evaluate("document.querySelector('[data-playbook-row=\"activity:activity_0\"] button:nth-of-type(2)').focus()"); await key("Enter", 13); assert.match(await rowText("activity", "activity_0"), /Proposed role: Unassigned \/ unknown/);
+  await click("Edit activity activity_0"); await enter("title", '<img src=x onerror="window.__xss=1">'); await enter("visitor_reason", "Literal untrusted text only"); await click("Save visitor edit"); assert.equal(await evaluate("document.querySelectorAll('.playbook-review img').length"), 0); assert.equal(await evaluate("window.__xss===undefined"), true); assert.ok((await rowText("activity", "activity_0")).includes("<img")); await click("Restore all AI fields");
+  assert.equal(await evaluate("window.offlineReview.readOriginal()"), original); assert.equal(await evaluate("sessionStorage.getItem('aivra:r0:demo-session:v1')"), sessionJSON);
+  evidence.checks.push("Activity Save/Cancel/Restore/all, field errors and nonblank reasons, null roles, original comparison, keyboard focus, inert XSS text, original envelope/session unchanged.");
+  await click("Edit milestone milestone_0"); await enter("proposed_date", "2027-02-30"); await enter("date_assumption", "Unverified planning only"); await enter("visitor_reason", "Visitor date proposal"); assert.equal(await evaluate("document.querySelector('button[type=submit]').disabled"), true); assert.equal(await evaluate("document.querySelector('[name=proposed_date]').getAttribute('aria-invalid')"), "true"); await enter("proposed_date", "2027-02-28"); await click("Save visitor edit"); assert.match(await rowText("milestone", "milestone_0"), /Proposed date: 2027-02-28/);
+  await click("Edit milestone milestone_1"); await enter("proposed_date", ""); assert.equal(await evaluate("document.querySelector('button[type=submit]').disabled"), true); await enter("date_assumption", ""); await enter("visitor_reason", "Date remains unknown"); await click("Save visitor edit"); assert.match(await rowText("milestone", "milestone_1"), /Proposed date: Unknown \/ not proposed/); assert.match(await rowText("milestone", "milestone_1"), /Original proposed date: 2027-01-31/); await click("Restore all AI fields");
+  evidence.checks.push("Milestone exact ISO date and basis pairing, invalid calendar blocked, blank remains unknown, original dates/links preserved and full Restore.");
+  for (const width of [1440, 390, 320]) { await page("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: false }); await click("Edit activity activity_0"); assert.equal(await evaluate("document.documentElement.scrollWidth > innerWidth"), false); const { nodes } = await page("Accessibility.getFullAXTree"); for (const name of ["Save visitor edit", "Cancel edit"]) assert.equal(nodes.filter(n => !n.ignored && n.role?.value === "button" && n.name?.value === name).length, 1); assert.ok(nodes.some(n => !n.ignored && n.role?.value === "textbox" && n.name?.value === "Title")); await screenshot(`review-${width}`); await click("Cancel edit"); }
+  evidence.checks.push("Isolated populated forms at1440/390/320, native accessible fields/buttons, keyboard and focus, no page overflow, three screenshots.");
+  await click("Edit activity activity_0"); await enter("title", "Saved before stale"); await enter("visitor_reason", "Explicit saved proposal"); await click("Save visitor edit"); await click("Edit milestone milestone_0"); await enter("title", "Unsaved before stale"); await evaluate("window.offlineReview.revoke()"); await waitFor("!document.querySelector('.playbook-review') && !document.querySelector('form')"); assert.match(await evaluate("document.body.textContent"), /Stale or unverified/); assert.equal(await evaluate("document.body.textContent.includes('Saved before stale')"), false);
+  await evaluate("window.offlineReview.replace()"); await waitFor("!!document.querySelector('.playbook-review')"); assert.match(await evaluate("document.body.textContent"), /0 saved visitor edits/); await click("Edit activity activity_0"); await evaluate("window.offlineReview.state.updateTSA(window.offlineReview.state.session.current_deal.tsa_services[0].tsa_id,{status:'active'})"); await waitFor("!document.querySelector('form') && !document.querySelector('.playbook-review')");
+  await page("Page.reload"); await waitFor("!!document.querySelector('.playbook-review')"); await evaluate("window.offlineReview.state.resetDemoSession()"); await waitFor("!document.querySelector('.playbook-review')"); assert.equal(await evaluate("window.offlineReview.fetches"), 0); assert.equal(await evaluate("window.offlineReview.readOriginal()"), original);
+  evidence.checks.push("Owner revocation discards saved+unsaved controls; replacement resets draft; local session edit and Reset invalidate; editing makes zero requests and no source/AI mutation.");
+  if (process.env.AIVRA_BASE_URL) {
+    const base = process.env.AIVRA_BASE_URL; assert.equal(new URL(base).hostname, "127.0.0.1");
+    for (const width of [1440, 390, 320]) { await page("Emulation.setDeviceMetricsOverride", { width, height: 1000, deviceScaleFactor: 1, mobile: false }); await page("Page.navigate", { url: `${base}/playbook-generator` }); await waitFor("!!document.querySelector('.playbook-generate-button') && !document.querySelector('.playbook-generate-button').disabled"); assert.equal(await evaluate("document.querySelectorAll('.playbook-review,form').length"), 0); assert.equal(await evaluate("document.body.textContent.includes('Fabricated discovery')"), false); assert.match(await evaluate("document.body.textContent"), /No current validated Playbook/); assert.equal(await evaluate("document.documentElement.scrollWidth > innerWidth"), false); await screenshot(`public-${width}`); }
+    const response = await fetch(`${base}/api/ai/playbook`, { method: "POST", body: "Ignored offline hostile body" }); assert.equal(response.status, 503); assert.equal(response.headers.get("cache-control"), "no-store");
+    await click("Generate playbook"); await waitFor("document.querySelector('[role=alert]')?.textContent.includes('Live Playbook AI is not enabled')"); assert.equal(await evaluate("document.querySelectorAll('.playbook-review,form').length"), 0); assert.equal(await evaluate("document.querySelectorAll('.future-feature').length"), 7);
+    evidence.checks.push("Actual production public page at1440/390/320 remains readiness-only, no populated/fake editor, unchanged503/no-store and explicit availability action, seven inert icons, three screenshots.");
+  }
+  assert.deepEqual(evidence.runtimeErrors, []); assert.deepEqual(evidence.externalRequests, []); await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2)); console.log(`PASS: ${evidence.checks.length} U04.03 Chromium groups; isolated fabricated editing and public readiness, zero external requests.`);
+} finally { socket?.close(); browser.kill(); await new Promise(resolve => server.close(resolve)); }

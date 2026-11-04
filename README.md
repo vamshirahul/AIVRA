@@ -404,8 +404,9 @@ current TSA records. It preserves original advice, baseline review and alternati
 hypotheses separately, with explicit missing context and source freshness checks.
 
 The U04.02 guarded generation foundation now carries this domain input through a
-strict Playbook-only structured context. Public AI remains disabled. Editable drafts
-belong to U04.03 and Markdown/JSON exports to U04.04.
+strict Playbook-only structured context. Public AI remains disabled. U04.03 now
+provides an isolated, source-authorized review workspace; Markdown/JSON exports
+remain U04.04 work.
 Run `npm run check:playbook-contract` (also in `check:ci`). See the
 [contract](docs/contracts/U04.01_Playbook_Contract.md) and
 [validation](U04.01_VALIDATION.md) for trust boundaries and limits.
@@ -430,6 +431,28 @@ or feasibility under the unchanged 2,048-output-token limit.
 Run `npm run check:playbook-action` (included in CI). See the
 [guarded generation contract](docs/contracts/U04.02_Playbook_Guarded_Generation_Contract.md)
 and [validation](U04.02_VALIDATION.md) for field scope, trust and activation gates.
+
+## Temporary Playbook review (U04.03 — in review)
+
+A current owner-issued Playbook can be reviewed in an A1 workspace. Visitor changes
+use a separate `playbook/review-draft/v1` overlay bound to the exact result and source.
+Activity title/description/proposed role and milestone title/proposed date/basis
+support Save, Cancel, Restore and field validation. Original AI data/provenance,
+uncertainty, dependencies, activity links and source references remain read-only.
+Saving proposes a change; it does not approve work, assign people or create obligations.
+
+The server review-source seam verifies U04.02 issued ownership/currentness; local
+session identity and digest checks are additional safeguards. Revoked/stale/replaced
+sources discard the open editor. Overlays live only in the mounted workspace and
+are discarded on navigation, refresh or Reset; no storage/persistence was added.
+
+The public page has no protected result source and shows an unavailable review
+notice. No fabricated activities or editor are exposed; the existing availability
+button and unconditional503 endpoint remain. Populated tests run in an isolated
+loopback harness outside Next's routes/build. U04.04 exports and live activation
+remain deferred. Run `npm run check:playbook-review` (also in CI). See the
+[review contract](docs/contracts/U04.03_Playbook_Review_Edit_Contract.md) and
+[validation](U04.03_VALIDATION.md).
 
 ## AI budget and fallback foundation (U00.07 — in review)
 

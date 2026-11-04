@@ -394,6 +394,23 @@ Run `npm run check:ala-export` (also in `check:ci`). See the
 [export contract](docs/contracts/U02.05_ALA_Reviewed_Export_Contract.md) and
 [validation](U02.05_VALIDATION.md) for field/version semantics, CSV limitations and gates.
 
+## Playbook input/output foundation (U04.01 — in review)
+
+The server-only `playbook/input/v1` and `playbook/output/v1` contracts define
+source-grounded draft phases, actions, proposed ownership roles, dependencies,
+assumptions, risks and milestones. Input preparation reuses the validated original
+ALA result, saved visitor review, existing scenario validation/CSE arithmetic and
+current TSA records. It preserves original advice, baseline review and alternative
+hypotheses separately, with explicit missing context and source freshness checks.
+
+This is offline contract work only. The public Playbook page remains an introduction
+with AI disabled. Generate/Regenerate belongs to U04.02, editable drafts to U04.03,
+and Markdown/JSON exports to U04.04. The structured domain input is not yet a
+gateway invocation; future gateway integration must preserve current limits and guards.
+Run `npm run check:playbook-contract` (also in `check:ci`). See the
+[contract](docs/contracts/U04.01_Playbook_Contract.md) and
+[validation](U04.01_VALIDATION.md) for trust boundaries and limits.
+
 ## AI budget and fallback foundation (U00.07 — in review)
 
 The internal router now supports independently capped paid/fallback paths,

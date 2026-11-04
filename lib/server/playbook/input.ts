@@ -1,34 +1,18 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
-import { z } from "zod";
-import { ApplicationSchema, TSAServiceSchema } from "../../contracts/demo.ts";
 import { DemoSessionSchema, MAX_SESSION_CHARACTERS } from "../../session/session.ts";
-import { ReviewedALAExportSchema } from "../../ala/review-export.ts";
-import { ScenarioDraftSchema, ScenarioFinancialDraftSchema, validateCurrentScenario } from "../../scenario-modeling/scenario-draft.ts";
+import { ScenarioFinancialDraftSchema, validateCurrentScenario } from "../../scenario-modeling/scenario-draft.ts";
 import { compareScenarios } from "../../scenario-modeling/scenario-comparison.ts";
-import { CSEResultSchema, freezeCSE } from "../../cost-synergy/calculation-contract.ts";
+import { freezeCSE } from "../../cost-synergy/calculation-contract.ts";
 import { prepareCSEContext } from "../cost-synergy/reviewed-context.ts";
 import { projectALAResults } from "../ala/presentation.ts";
 import { MAX_INPUT_BYTES, SourceIdSchema } from "../ai/contracts.ts";
 
-export const PLAYBOOK_INPUT_VERSION = "playbook/input/v1" as const;
-export const PLAYBOOK_PROMPT_VERSION = "playbook/v1" as const;
-const Digest = z.string().regex(/^[a-f0-9]{64}$/);
-const Summary = CSEResultSchema.options[1].pick({ status: true, currency: true, money_unit: true, totals: true, warnings: true, conflicts: true });
-export const PlaybookInputSchema = z.strictObject({
-  contract_version: z.literal(PLAYBOOK_INPUT_VERSION), prompt_version: z.literal(PLAYBOOK_PROMPT_VERSION),
-  illustrative_unapproved: z.literal(true),
-  source: z.strictObject({ session_id: z.uuid(), fixture: DemoSessionSchema.shape.fixture,
-    session_revision: DemoSessionSchema.shape.session_revision, input_revisions: DemoSessionSchema.shape.input_revisions,
-    deal_digest: Digest, review_digest: Digest, scenario_digest: Digest }),
-  applications: z.array(ApplicationSchema).min(2).max(100), tsa_services: z.array(TSAServiceSchema).max(100),
-  reviewed_ala: ReviewedALAExportSchema,
-  selected_scenario: z.enum(["baseline", "alternative"]), scenario: ScenarioDraftSchema,
-  financial_summary: Summary,
-  incomplete_context: z.array(z.enum(["ala_incomplete", "financial_incomplete"])).max(2),
-});
-export type PlaybookInput = z.infer<typeof PlaybookInputSchema>;
+import { PLAYBOOK_INPUT_VERSION, PLAYBOOK_PROMPT_VERSION, PlaybookInputSchema } from "./input-schema.ts";
+import type { PlaybookInput } from "./input-schema.ts";
+export { PLAYBOOK_INPUT_VERSION, PLAYBOOK_PROMPT_VERSION, PlaybookInputSchema } from "./input-schema.ts";
+export type { PlaybookInput } from "./input-schema.ts";
 export type PlaybookInputs = {
   // Trusted protected server composition only, never a browser export/file attestation.
   outcome: unknown; captured_session: unknown; current_session: unknown; review: unknown;

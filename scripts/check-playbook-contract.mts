@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import { z } from "zod";
 import { createDemoSession, updateApplication, updateLicense, updateTSA } from "../lib/session/session.ts";
 import { buildALARequest } from "../lib/server/ala/request.ts";
@@ -24,7 +25,7 @@ import { MAX_INPUT_BYTES } from "../lib/server/ai/contracts.ts";
 // Entirely fabricated offline model content/provenance; never imported by public UI.
 const session = createDemoSession(), apps = session.current_deal.applications;
 const data: ALAResult = { findings: apps.map((a, i) => ({ finding_id: `f_${i}`, domain: "Offline contract specimen", relationship: "unique", buyer_app_ids: a.company_side === "buyer" ? [a.app_id] : [], target_app_ids: a.company_side === "target" ? [a.app_id] : [], actions: [{ action_id: `a_${i}`, subject: { app_id: a.app_id, side: a.company_side }, disposition: "Needs Review", destination: null, rationale: "Fabricated original only, never actual analysis." }], rationale: "Offline contract test.", evidence: [{ app_id: a.app_id, attribute: "annual_cost" }], uncertainty: { level: "unknown", reason: "No genuine model execution." } })), not_evaluated: [] };
-function setup(s = session, value = data) {
+export function setup(s = session, value = data) {
   const built = buildALARequest(s), inspected = inspectALAResult(value, s.current_deal.applications); assert.ok(built.ok && inspected.ok);
   const outcome = { status: inspected.coverage.status === "complete" ? "success" : "incomplete", source_token: built.source_token, coverage: inspected.coverage,
     envelope: { module: "ala", request_id: "efb62c13-f1ea-43d4-86a9-ab595398b4bb", input_digest: createHash("sha256").update(JSON.stringify({ input: built.request, references: { allow_empty: true, duplicates: "reject" } })).digest("hex"), model_provider: "fabricated-only", model_id: "offline-contract", mode: "paid", prompt_version: "ala/v1", generated_at: "2026-11-04T00:00:00Z", usage_estimate: { input_tokens: null, output_tokens: null, total_tokens: null, cost_usd: null }, warnings: ["ai_generated_draft", "references_not_narrative_verification"], data: value } };
@@ -40,7 +41,7 @@ function setup(s = session, value = data) {
 const base = setup();
 function input(args = base.inputs) { const b = preparePlaybookContract(args); assert.ok(b.ok, JSON.stringify(b)); return b.input; }
 const captured = input(), original = JSON.stringify({ base, session });
-function specimen(s: PlaybookInput = captured): PlaybookResult {
+export function specimen(s: PlaybookInput = captured): PlaybookResult {
   const refs = [...s.reviewed_ala.effective_actions.map((a) => ({ kind: "ala_action" as const, finding_id: a.finding_id, action_id: a.action_id, ...a.subject })),
     ...s.applications.filter((a) => !s.reviewed_ala.effective_actions.some((r) => r.subject.app_id === a.app_id)).map((a) => ({ kind: "application" as const, app_id: a.app_id, side: a.company_side })),
     ...s.tsa_services.map((t) => ({ kind: "tsa" as const, tsa_id: t.tsa_id }))];
@@ -49,6 +50,7 @@ function specimen(s: PlaybookInput = captured): PlaybookResult {
     actions: refs.map((ref, i) => ({ activity_id: `activity_${i}`, phase_id: "phase_1", title: "Fabricated test activity", description: "Offline-only LLM specimen, not a public plan.", ownership_role: null, depends_on_activity_ids: i ? [`activity_${i - 1}`] : [], assumptions: [], uncertainty: { level: "unknown", reason: "Offline fabricated content" }, source_refs: [ref] })),
     milestones: [{ milestone_id: "milestone_1", phase_id: "phase_1", title: "Fabricated test milestone", after_activity_ids: [`activity_${refs.length - 1}`], proposed_date: null, date_assumption: null, source_refs: [refs[0]] }], risks: [], not_addressed: [], limitations: ["Fabricated offline test only"] };
 }
+if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
 let groups = 0, network = 0; const beforeFetch = globalThis.fetch; globalThis.fetch = async () => { network++; throw Error("Playbook contract tests forbid network"); };
 async function check(name: string, run: () => unknown | Promise<unknown>) { await run(); groups++; console.log(`PASS: ${name}`); }
 try {
@@ -122,8 +124,9 @@ try {
   await check("server-only boundary, unchanged public disabled route and no live/network/storage operations", async () => {
     const blocked = spawnSync(process.execPath, ["--input-type=module", "-e", "await import('./lib/server/playbook/contract.ts')"], { encoding: "utf8" }); assert.notEqual(blocked.status, 0); assert.match(blocked.stderr, /server-only|Client Component/);
     for (const file of ["input.ts", "schema.ts", "prompt.ts", "contract.ts"]) { const code = await readFile(`lib/server/playbook/${file}`, "utf8"); assert.match(code, /import "server-only"/); assert.doesNotMatch(code, /fetch\(|createAIRouter\(|createAIAdapter\(|sessionStorage|localStorage|process\.env|console\./); }
-    const page = await readFile("app/[module]/page.tsx", "utf8"); assert.doesNotMatch(page, /server\/playbook|Generate plan/); assert.match(page, /playbook-generator.*ai-assistant/);
+    const page = await readFile("app/[module]/page.tsx", "utf8"); assert.doesNotMatch(page, /server\/playbook|Generate plan/); assert.match(page, /GeneratePlaybook/);
     assert.equal(JSON.stringify({ base, session }), original); assert.equal(network, 0);
   });
   console.log(`PASS: ${groups} U04.01 groups; contract-only, original/review/scenario separation, source/graph/coverage validation, zero network.`);
 } finally { globalThis.fetch = beforeFetch; }
+}

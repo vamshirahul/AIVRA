@@ -50,9 +50,9 @@ read-only Buyer/Target application inventory preview; Application Rationalizatio
 has a readiness-only Analyze action, License Optimizer shows the shared read-only
 license inventory, TSA Tracker shows current linked synthetic services, and Cost
 Synergy and Scenario Modeling have readiness workspaces.
-Integration Health shows current TSA source counts; its other sections and the
-Playbook/Assistant pages remain introductions. Live AI
-remains disabled.
+Integration Health shows current TSA source counts; its other sections remain planned.
+The Assistant page remains an introduction; Playbook has an availability-only
+Generate action. Live AI remains disabled.
 
 | Group | Page | Route |
 | --- | --- | --- |
@@ -403,20 +403,40 @@ ALA result, saved visitor review, existing scenario validation/CSE arithmetic an
 current TSA records. It preserves original advice, baseline review and alternative
 hypotheses separately, with explicit missing context and source freshness checks.
 
-This is offline contract work only. The public Playbook page remains an introduction
-with AI disabled. Generate/Regenerate belongs to U04.02, editable drafts to U04.03,
-and Markdown/JSON exports to U04.04. The structured domain input is not yet a
-gateway invocation; future gateway integration must preserve current limits and guards.
+The U04.02 guarded generation foundation now carries this domain input through a
+strict Playbook-only structured context. Public AI remains disabled. Editable drafts
+belong to U04.03 and Markdown/JSON exports to U04.04.
 Run `npm run check:playbook-contract` (also in `check:ci`). See the
 [contract](docs/contracts/U04.01_Playbook_Contract.md) and
 [validation](U04.01_VALIDATION.md) for trust boundaries and limits.
+
+## Guarded Playbook generation (U04.02 — in review)
+
+The internal server-only owner offers explicit Generate and Regenerate operations
+through the existing guarded router. Both require fresh protected source reads,
+strict original/review/scenario validation and independent budget/rate/concurrency
+authorization. Stale/invalid results are withheld; failed regeneration retains the
+prior immutable draft without treating it as current after source changes.
+
+The public **Generate playbook** button only checks availability with a body-free
+POST. `/api/ai/playbook` always returns 503/no-store; it reads no request or environment
+and cannot call AI. No fabricated draft is displayed. Regenerate remains unavailable
+on the public page because there is no validated draft. Reset/navigation abort checks.
+
+The measured offline 30-app fixture requires 114,119 UTF-8 bytes including the full
+invocation and output schema, below the unchanged 128,000-byte cap. Larger inputs
+can fail without truncation. Mock results do not establish practical model quality
+or feasibility under the unchanged 2,048-output-token limit.
+Run `npm run check:playbook-action` (included in CI). See the
+[guarded generation contract](docs/contracts/U04.02_Playbook_Guarded_Generation_Contract.md)
+and [validation](U04.02_VALIDATION.md) for field scope, trust and activation gates.
 
 ## AI budget and fallback foundation (U00.07 — in review)
 
 The internal router now supports independently capped paid/fallback paths,
 atomic reservation/settlement contracts, anonymous/global rate windows and
-concurrency leases. Live dispatch remains disabled; the only public AI path is
-the unconditional unavailable ALA readiness response.
+concurrency leases. Live dispatch remains disabled; public ALA and Playbook readiness
+responses are unconditional unavailable responses.
 The in-memory store is a deterministic test fake, not a production budget store.
 
 Run `npm run check:ai-controls` and `npm run check:ai-adapter` for offline tests.
@@ -425,8 +445,8 @@ and [U00.07 validation](U00.07_VALIDATION.md) for remaining activation gates.
 
 ## Shared AI feedback (U00.08 — in review)
 
-License Optimizer, Playbook Generator and AI Assistant retain static “AI not enabled”;
-Application Rationalization has the readiness-only action above. A reusable read-only
+License Optimizer and AI Assistant retain static “AI not enabled”;
+Application Rationalization and Playbook have readiness-only actions above. A reusable read-only
 notice supports loading, validated paid/fallback provenance, safe errors and
 owner-supplied stale status for future modules. No live inference is enabled.
 Run `npm run check:ai-ui` for offline presentation checks. See the

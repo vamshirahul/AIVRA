@@ -1,6 +1,10 @@
 import "server-only";
 import { z } from "zod";
+import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
 import { SyntheticDealFixtureSchema } from "../../contracts/demo.ts";
+import { PlaybookInputSchema, PLAYBOOK_PROMPT_VERSION } from "../playbook/input-schema.ts";
+import { PLAYBOOK_SYSTEM_PROMPT } from "../playbook/prompt.ts";
 
 export const MAX_INPUT_BYTES = 128_000;
 export const MAX_OUTPUT_BYTES = 64_000;
@@ -14,10 +18,25 @@ export const InvocationSchema = z.strictObject({
   module: ModuleSchema,
   prompt_version: z.string().max(64).regex(/^[a-z][a-z0-9_-]{0,31}\/v[1-9][0-9]{0,3}$/),
   system: z.string().trim().min(1).max(4_000),
-  context: z.strictObject({ deal: SyntheticDealFixtureSchema, user_text: z.string().max(2_000).optional() }),
+  context: z.strictObject({ deal: SyntheticDealFixtureSchema, user_text: z.string().max(2_000).optional(), playbook: PlaybookInputSchema.optional() }),
   allowed_source_ids: z.array(SourceIdSchema).min(1).max(400),
 }).superRefine((input, ctx) => {
   const deal = input.context.deal;
+  const playbook = input.context.playbook;
+  if (input.module === "playbook") {
+    const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+    const expectedIds = [...deal.applications.map((a) => a.app_id), ...deal.tsa_services.map((t) => t.tsa_id)];
+    if (!playbook || input.prompt_version !== PLAYBOOK_PROMPT_VERSION || input.system !== PLAYBOOK_SYSTEM_PROMPT || Object.hasOwn(input.context, "user_text") ||
+        !isDeepStrictEqual(input.allowed_source_ids, expectedIds) || !isDeepStrictEqual(playbook.applications, deal.applications) || !isDeepStrictEqual(playbook.tsa_services, deal.tsa_services) ||
+        playbook.source.deal_digest !== hash(deal) || !isDeepStrictEqual(playbook.source.fixture, { fixture_id: deal.fixture_id, schema_version: deal.schema_version, dataset_version: deal.dataset_version }) ||
+        playbook.source.scenario_digest !== hash({ scenario: playbook.scenario, selected_scenario: playbook.selected_scenario }) ||
+        playbook.source.review_digest !== playbook.scenario.source_binding.review_digest ||
+        playbook.source.review_digest !== hash({ review: playbook.reviewed_ala.review, effective_actions: playbook.reviewed_ala.effective_actions })) {
+      ctx.addIssue({ code: "custom", message: "Invalid Playbook structured context, source binding or server instructions" });
+    }
+  } else if (Object.hasOwn(input.context, "playbook") || input.prompt_version === PLAYBOOK_PROMPT_VERSION) {
+    ctx.addIssue({ code: "custom", message: "Playbook context is restricted to its own module" });
+  }
   if (deal.applications.length > 100 || ["buyer", "target"].some((side) => deal.applications.filter((app) => app.company_side === side).length > 50) || deal.license_positions.length > 200 || deal.tsa_services.length > 100) {
     ctx.addIssue({ code: "too_big", origin: "array", maximum: 100, inclusive: true, message: "Source record limit exceeded" });
   }

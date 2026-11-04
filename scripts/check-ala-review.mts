@@ -164,7 +164,7 @@ try {
     }
     const ui = await readFile("components/ala/ala-review-workspace.ts", "utf8"); assert.match(ui, /key, view/); assert.match(ui, /onCancel: closeEditor/); assert.match(ui, /const closeEditor = \(\) => \{ focusAfterClose.current = true; setEditing\(false\); \}/); assert.match(ui, /editButton\.current\?\.focus\(\)/); assert.match(ui, /setDestination\(""\)/); assert.match(ui, /latest\.current = result\.draft/); assert.match(ui, /aria-live": "polite"/);
     const css = await readFile("app/globals.css", "utf8"); assert.match(css, /minmax\(min\(100%, 240px\), 1fr\)/); assert.match(css, /\.ala-review-form :is\(select, textarea\):focus-visible/); assert.match(css, /\.ala-results-scroll \{ max-width: 100%; overflow-x: auto/);
-    const api = (await readdir("app", { recursive: true })).map((s) => s.replaceAll("\\", "/")).filter((s) => /^api(?:\/|$)/.test(s)).sort(); assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts"]);
+    const api = (await readdir("app", { recursive: true })).map((s) => s.replaceAll("\\", "/")).filter((s) => /^api(?:\/|$)/.test(s)).sort(); assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts", "api/ai/playbook", "api/ai/playbook/route.ts"]);
     assert.equal(attempts, 0); assert.equal(JSON.stringify({ view, originalOutcome, session }), original);
   });
   console.log(`PASS: ${groups} U02.04 groups; fabricated specimens only, frozen originals retained; zero network/provider attempts. Populated-edit browser/manual UAT remains pending protected integration.`);

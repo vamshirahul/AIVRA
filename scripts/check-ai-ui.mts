@@ -121,6 +121,7 @@ if (process.argv.includes("--browser")) {
         assert.equal(await notice.locator("button,a,[tabindex],[role=status],[role=alert]").count(), 0);
         if (path === "/license-optimizer") assert.equal(await page.getByRole("heading", { name: "License inventory", exact: true }).count(), 1);
         else if (path === "/application-rationalization") assert.equal(await page.getByRole("button", { name: "Analyze applications", exact: true }).count(), 1);
+        else if (path === "/playbook-generator") assert.equal(await page.getByRole("button", { name: "Generate playbook", exact: true }).count(), 1);
         else assert.equal(await page.getByText("Not yet implemented", { exact: true }).count(), 1);
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
       }

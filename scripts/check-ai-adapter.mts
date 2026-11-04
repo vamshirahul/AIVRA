@@ -152,7 +152,7 @@ try {
     await assert.rejects(() => live.generate({ input, schema, signal: new AbortController().signal }), (error: unknown) => error instanceof TransportFailure && error.code === "ai_controls_not_ready");
     assert.equal(networkAttempts, 0);
   });
-  await check("server-only marker rejects ordinary import; only inert ALA availability route is allowed", async () => {
+  await check("server-only marker rejects ordinary import; only inert ALA/Playbook availability routes are allowed", async () => {
     const child = spawnSync(process.execPath, ["--input-type=module", "-e", "await import('./lib/server/ai/adapter.ts')"], { encoding: "utf8", timeout: 5000 });
     assert.notEqual(child.status, 0); assert.match(child.stderr, /cannot be imported from a Client Component/);
     for (const directory of ["app", "components"]) {
@@ -162,10 +162,12 @@ try {
       }
     }
     const api = (await readdir("app", { recursive: true })).map((file) => file.replaceAll("\\", "/")).filter((file) => /^api(?:\/|$)/.test(file)).sort();
-    assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts"]);
-    const route = await readFile("app/api/ai/ala/route.ts", "utf8");
+    assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts", "api/ai/playbook", "api/ai/playbook/route.ts"]);
+    for (const routePath of ["app/api/ai/ala/route.ts", "app/api/ai/playbook/route.ts"]) {
+    const route = await readFile(routePath, "utf8");
     assert.match(route, /export function POST\(\)/); assert.match(route, /status: 503/);
     assert.doesNotMatch(route, /\bimport\s|process\.env|createAI|fake-usage|\b(?:request|req)\.(?:json|text|arrayBuffer|body)/);
+    }
   });
   assert.equal(networkAttempts, 0);
   assert.ok(logs.every((line) => !line.includes(canary) && !line.includes(fakeKey)));

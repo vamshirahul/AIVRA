@@ -3,7 +3,7 @@ import { ApplicationSchema, LicensePositionSchema, SyntheticDealFixtureSchema, T
 import { loadSyntheticDealFixture } from "../fixtures/synthetic-deal.ts";
 import { prepareApplicationPublication, PublicationFailure } from "../data-mapper/publish-applications.ts";
 import type { PublicationToken } from "../data-mapper/publish-applications.ts";
-import type { Application } from "../contracts/demo.ts";
+import type { Application, TSAService } from "../contracts/demo.ts";
 
 export const SESSION_SCHEMA_VERSION = "1.0.0" as const;
 export const SESSION_STORAGE_KEY = "aivra:r0:demo-session:v1";
@@ -140,6 +140,29 @@ const TSAPatchSchema = z.strictObject(TSAServiceSchema.shape).omit({ tsa_id: tru
 export type ApplicationPatch = z.infer<typeof ApplicationPatchSchema>;
 export type LicensePatch = z.infer<typeof LicensePatchSchema>;
 export type TSAPatch = z.infer<typeof TSAPatchSchema>;
+const TSACreateSchema = z.strictObject(TSAServiceSchema.shape).omit({ tsa_id: true }).partial({ owner: true, start_date: true, end_date: true, exit_milestone: true, risk_notes: true });
+export type TSACreateInput = z.infer<typeof TSACreateSchema>;
+export type TSACreateToken = { session_id: string; session_revision: number };
+export type TSAEditToken = { session_id: string; tsa_revision: number; application_revision: number; tsa_id: string; record_json: string };
+
+export function matchesTSAEdit(session: DemoSession, id: string, expected: TSAEditToken): boolean {
+  const record = session.current_deal.tsa_services.find((s) => s.tsa_id === id);
+  return !!record && !!expected && expected.session_id === session.session_id && expected.tsa_id === id && expected.tsa_revision === session.input_revisions.tsa && expected.application_revision === session.input_revisions.applications && expected.record_json === JSON.stringify(record);
+}
+
+/** TSA-CREATE-001: caller must serialize before committing. One UUID attempt;
+ * full-schema identity validation rejects collisions without retries or rewriting.
+ */
+export function createTSA(session: DemoSession, input: TSACreateInput, expected: TSACreateToken, now = new Date().toISOString()): DemoSession {
+  if (!expected || expected.session_id !== session.session_id || expected.session_revision !== session.session_revision) throw new Error("Stale TSA creation");
+  DemoSessionSchema.parse(session);
+  const parsed = TSACreateSchema.parse(input);
+  const { related_app_ids, ...fields } = parsed;
+  const service: TSAService = TSAServiceSchema.parse({ ...fields, ...(related_app_ids === undefined ? {} : { related_app_ids }), tsa_id: `tsa-${crypto.randomUUID()}`, owner: parsed.owner ?? null, start_date: parsed.start_date ?? null, end_date: parsed.end_date ?? null, exit_milestone: parsed.exit_milestone ?? null, risk_notes: parsed.risk_notes ?? null });
+  const next = DemoSessionSchema.parse({ ...session, current_deal: { ...session.current_deal, tsa_services: [...session.current_deal.tsa_services, service] }, modified_at: nextTime(session, now), session_revision: session.session_revision + 1, input_revisions: { ...session.input_revisions, tsa: session.input_revisions.tsa + 1 } });
+  serializeSession(next); // Existing byte/character guard also holds for direct callers.
+  return next;
+}
 
 function updateRecord(session: DemoSession, dependency: InputDependency, id: string, patch: unknown, now: string): DemoSession {
   const field = dependency === "applications" ? "applications" : dependency === "licenses" ? "license_positions" : "tsa_services";
@@ -159,6 +182,7 @@ export function updateApplication(session: DemoSession, id: string, patch: Appli
 export function updateLicense(session: DemoSession, id: string, patch: LicensePatch, now = new Date().toISOString()) {
   return updateRecord(session, "licenses", id, LicensePatchSchema.parse(patch), now);
 }
-export function updateTSA(session: DemoSession, id: string, patch: TSAPatch, now = new Date().toISOString()) {
+export function updateTSA(session: DemoSession, id: string, patch: TSAPatch, now = new Date().toISOString(), expected?: TSAEditToken) {
+  if (expected !== undefined && !matchesTSAEdit(session, id, expected)) throw new Error("Stale TSA edit");
   return updateRecord(session, "tsa", id, TSAPatchSchema.parse(patch), now);
 }

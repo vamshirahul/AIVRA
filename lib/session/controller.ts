@@ -1,8 +1,8 @@
-import { captureInputVersions, createDemoSession, getResultFreshness, parseSession, publishSessionApplications, recordDerivedResultMetadata, serializeSession, SESSION_STORAGE_KEY, updateApplication, updateLicense, updateTSA } from "./session.ts";
+import { captureInputVersions, createDemoSession, createTSA, getResultFreshness, parseSession, publishSessionApplications, recordDerivedResultMetadata, serializeSession, SESSION_STORAGE_KEY, updateApplication, updateLicense, updateTSA } from "./session.ts";
 import { PublicationFailure } from "../data-mapper/publish-applications.ts";
 import type { PublicationBlock, PublicationResult, PublicationToken } from "../data-mapper/publish-applications.ts";
 import type { Application } from "../contracts/demo.ts";
-import type { ApplicationPatch, CapturedVersions, DemoSession, InputDependency, LicensePatch, ResultKind, TSAPatch } from "./session.ts";
+import type { ApplicationPatch, CapturedVersions, DemoSession, InputDependency, LicensePatch, ResultKind, TSAPatch, TSACreateInput, TSACreateToken, TSAEditToken } from "./session.ts";
 
 export type SessionStorageAccess = () => Pick<Storage, "getItem" | "setItem" | "removeItem">;
 export type SessionSnapshot = { session: DemoSession | null; ready: boolean; storageAvailable: boolean; recovered: boolean };
@@ -71,7 +71,8 @@ export function createDemoSessionController(storage: SessionStorageAccess, clock
     },
     updateApplication: (id: string, patch: ApplicationPatch) => apply((state) => updateApplication(state, id, patch, clock())),
     updateLicense: (id: string, patch: LicensePatch) => apply((state) => updateLicense(state, id, patch, clock())),
-    updateTSA: (id: string, patch: TSAPatch) => apply((state) => updateTSA(state, id, patch, clock())),
+    updateTSA: (id: string, patch: TSAPatch, expected?: TSAEditToken) => apply((state) => updateTSA(state, id, patch, clock(), expected)),
+    createTSA: (input: TSACreateInput, expected: TSACreateToken) => apply((state) => createTSA(state, input, expected, clock())),
     publishApplications(side: Application["company_side"], applications: readonly Application[], expected: PublicationToken): PublicationResult {
       let rejection: PublicationBlock | undefined;
       let changed = false;

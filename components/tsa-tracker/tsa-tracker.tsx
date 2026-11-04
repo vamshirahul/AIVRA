@@ -8,14 +8,18 @@ import { TSA_STATUS_LABELS } from "../../lib/tsa-tracker/tsa-inventory-view";
 import { captureTSADraft, prepareTSADraft, isCurrentTSADraft } from "../../lib/tsa-tracker/tsa-edit";
 import type { TSADraft, TSADraftErrors, TSAFilter } from "../../lib/tsa-tracker/tsa-edit";
 import type { TSAInventoryViewProps } from "./tsa-inventory";
+import { buildTSASummary } from "../../lib/tsa-tracker/tsa-summary";
+import { downloadTSASummary } from "../../lib/tsa-tracker/tsa-export";
+import type { TSAExportFormat } from "../../lib/tsa-tracker/tsa-export";
 
 type Active = ReturnType<typeof captureTSADraft>;
 export function TSATracker({ session, controller, View }: { session: DemoSession; controller: DemoSessionController; View: ComponentType<TSAInventoryViewProps> }) {
   const [active, setActive] = useState<Active | null>(null), [filter, setFilter] = useState<TSAFilter>("all"), [errors, setErrors] = useState<TSADraftErrors>({}), [message, setMessage] = useState(""), [reference, setReference] = useState<string | null>(null);
   const latest = useRef(active), returnTo = useRef<string | null>(null), panel = useRef<HTMLHeadingElement>(null), errorSummary = useRef<HTMLParagraphElement>(null), filterControl = useRef<HTMLSelectElement>(null);
   latest.current = active; const id = useId();
+  const mounted = useRef(true), summary = buildTSASummary(session);
   useEffect(() => { setReference(new Date().toISOString().slice(0, 10)); }, []);
-  useLayoutEffect(() => () => { latest.current = null; }, []);
+  useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; latest.current = null; }; }, []);
   useLayoutEffect(() => { if (active) panel.current?.focus(); else if (returnTo.current) { const target = document.getElementById(returnTo.current); (target ?? filterControl.current)?.focus(); returnTo.current = null; } }, [active?.editing]);
   useLayoutEffect(() => { if (Object.keys(errors).length) errorSummary.current?.focus(); }, [errors]);
   const stale = !!active && !isCurrentTSADraft(session, active.editing);
@@ -34,6 +38,10 @@ export function TSATracker({ session, controller, View }: { session: DemoSession
     const result = draft.editing.mode === "create" ? controller.createTSA(prepared.input, draft.editing.expected) : controller.updateTSA(draft.editing.expected.tsa_id, prepared.patch, draft.editing.expected);
     if (!result.ok) { setErrors({ form: "Save was rejected. Review the fields and current source, or Cancel. Your draft is retained." }); return; }
     const after = controller.getSnapshot(); close(); setMessage(after.storageAvailable ? "TSA saved in this browser session." : "TSA saved in memory only. Browser storage is unavailable; changes may be lost on refresh.");
+  }
+  function download(format: TSAExportFormat) {
+    const result = downloadTSASummary(() => ({ session: controller.getSnapshot().session, current: mounted.current, unsaved: latest.current !== null }), format);
+    setMessage(result.ok ? `Download initiated for all saved TSA services.${controller.getSnapshot().storageAvailable ? "" : " Source is memory only and may be lost on refresh."}` : result.message);
   }
   const textField = (key: "title" | "provider" | "recipient" | "owner" | "start_date" | "end_date" | "exit_milestone" | "risk_notes", label: string, area = false) => {
     if (!active) return null;
@@ -61,5 +69,6 @@ export function TSATracker({ session, controller, View }: { session: DemoSession
       <div className="tsa-toolbar"><button type="submit" className="button button-primary" disabled={stale}>Save</button><button type="button" className="button button-secondary" onClick={() => { close(); setMessage("Draft cancelled; shared TSA records unchanged."); }}>Cancel</button>{stale && <button type="button" className="button button-secondary" onClick={() => open(active.editing.mode === "edit" ? active.editing.expected.tsa_id : undefined)}>Reload current values (discard draft)</button>}</div>
     </form>}
     <View session={session} ready={true} filter={filter} onEdit={open} editing={!!active} reference={reference} />
+    <section className="tsa-downloads" aria-label="TSA summary downloads"><h2 className="section-title">Download TSA summary</h2><p className="tsa-help">Includes all saved TSA services, regardless of the status filter. Synthetic and unapproved source records only.{active ? " Save or Cancel the open draft before downloading." : " Unsaved drafts are never included."}</p>{!summary.ok && <p role="status" className="tsa-error">{summary.message}</p>}<div className="tsa-toolbar">{(["csv", "json"] as const).map((format) => <button key={format} type="button" className="button button-secondary" disabled={!!active || !summary.ok} onClick={() => download(format)}>Download TSA {format.toUpperCase()}</button>)}</div></section>
   </section>;
 }

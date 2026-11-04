@@ -28,8 +28,10 @@ const seedJSON = serializeSession(seed);
 const keyLiteral = JSON.stringify(SESSION_STORAGE_KEY);
 const evidence = { checks: [], runtimeErrors: [], limitations: "Focused Chromium keyboard/DOM/AX checks; no full WCAG or physical-device test. Browser input is seeded through the real validated controller; no production test globals." };
 const tsaEditChecks = process.argv.includes("--tsa-edit-browser");
-const tsaChecks = tsaEditChecks || process.argv.includes("--tsa-browser");
-const output = tsaEditChecks ? ".temp/u07-02" : tsaChecks ? ".temp/u07-01" : "artifacts/u00-05";
+const tsaExportChecks = process.argv.includes("--tsa-export-browser");
+const tsaChecks = tsaExportChecks || tsaEditChecks || process.argv.includes("--tsa-browser");
+const output = tsaExportChecks ? ".temp/u07-03" : tsaEditChecks ? ".temp/u07-02" : tsaChecks ? ".temp/u07-01" : "artifacts/u00-05";
+const downloads = [], completedDownloads = new Set();
 await mkdir(output, { recursive: true });
 const profile = await mkdtemp(path.join(tmpdir(), "aivra-u05-chromium-"));
 const browser = spawn(process.env.AIVRA_CHROMIUM_PATH, ["--headless", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true });
@@ -48,6 +50,8 @@ try {
   await new Promise((resolve, reject) => { socket.addEventListener("open", resolve, { once: true }); socket.addEventListener("error", reject, { once: true }); });
   socket.addEventListener("message", ({ data }) => {
     const message = JSON.parse(data);
+    if (message.method === "Browser.downloadWillBegin") downloads.push(message.params);
+    if (message.method === "Browser.downloadProgress" && message.params.state === "completed") completedDownloads.add(message.params.guid);
     if (message.method === "Page.loadEventFired") onLoad?.();
     if (message.method === "Runtime.exceptionThrown") evidence.runtimeErrors.push(message.params.exceptionDetails.text);
     if (message.method === "Runtime.consoleAPICalled" && message.params.type === "error") evidence.runtimeErrors.push(message.params.args.map((arg) => arg.description ?? arg.value).join(" "));
@@ -98,7 +102,10 @@ try {
   }
   await page("Page.enable"); await page("Runtime.enable");
   if (tsaChecks) {
-    if (tsaEditChecks) {
+    if (tsaExportChecks) {
+      const { checkTSAExportHealthBrowser } = await import("./check-tsa-export-health.mts");
+      await checkTSAExportHealthBrowser({ page, send, evaluate, waitFor, load, key, base, output, evidence, downloads, completedDownloads });
+    } else if (tsaEditChecks) {
       const { checkTSAEditBrowser } = await import("./check-tsa-edit.mts");
       await checkTSAEditBrowser({ page, evaluate, waitFor, load, key, base, output, evidence });
     } else {
@@ -107,7 +114,7 @@ try {
     }
     assert.deepEqual(evidence.runtimeErrors, []);
     await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2) + "\n");
-    console.log(`PASS: ${evidence.checks.length} ${tsaEditChecks ? "U07.02" : "U07.01"} browser groups; public TSA workflow, source identity, keyboard/viewport and session lifecycle.`);
+    console.log(`PASS: ${evidence.checks.length} ${tsaExportChecks ? "U07.03" : tsaEditChecks ? "U07.02" : "U07.01"} browser groups; public TSA workflow, source identity, keyboard/viewport and session lifecycle.`);
   } else {
   await page("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await load("Page.navigate", { url: base });

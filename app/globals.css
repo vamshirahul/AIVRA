@@ -201,6 +201,12 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .license-inventory-table th, .license-inventory-table td { white-space: pre-wrap; }
 .license-inventory-table td:nth-child(2) { min-width: 220px; }
 .tsa-inventory-table { min-width: 1850px; }
+.tsa-downloads { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); }
+.tsa-health-summary { margin-top: 28px; padding: clamp(16px, 3vw, 26px); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow-wrap: anywhere; }
+.tsa-count-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 12px; margin-block: 18px; }
+.tsa-count-grid > div { border: 1px solid var(--border); border-radius: 6px; padding: 14px; }
+.tsa-count-grid dt { font-size: 12px; color: var(--muted); }
+.tsa-count-grid dd { margin-top: 6px; font-size: 24px; font-weight: 650; }
 .tsa-toolbar { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-block: 16px; }
 .tsa-tracker label { display: block; font-size: 12px; font-weight: 600; margin-block: 8px; }
 .tsa-tracker :is(input[type="text"], textarea, select) { width: 100%; max-width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--foreground); padding: 10px; font: inherit; font-size: 12px; }

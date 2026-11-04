@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useDemoSession } from "../demo-session-provider";
 import { AIStatusNotice } from "../ai/ai-status-notice";
+import { PlaybookReviewWorkspace } from "./playbook-review-workspace";
 
 const Unavailable = z.strictObject({ status: z.literal("error"), error: z.strictObject({ code: z.literal("ai_controls_not_ready"), request_id: z.null(), message: z.string().min(1).max(160) }) });
 type View = "not_enabled" | "checking" | "unavailable" | "failed";
@@ -39,5 +40,6 @@ export function GeneratePlaybook() {
       : view === "unavailable" ? <p role="alert">Live Playbook AI is not enabled. No draft was generated; your session data is retained.</p>
       : view === "failed" ? <p role="alert">Playbook availability could not be verified. No draft was generated; your session data is retained.</p>
       : <AIStatusNotice state={{ status: "not_enabled" }} />}
+    <PlaybookReviewWorkspace />
   </section>;
 }

@@ -202,6 +202,22 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .license-inventory-table td:nth-child(2) { min-width: 220px; }
 .tsa-inventory-table { min-width: 1850px; }
 .tsa-downloads { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--border); }
+.playbook-review, .playbook-review-empty { margin-top: 24px; padding: clamp(14px, 3vw, 24px); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow-wrap: anywhere; }
+.playbook-review h3 { font-size: 17px; font-weight: 650; margin-block: 20px 10px; }
+.playbook-review h4 { font-weight: 650; margin-block: 10px; }
+.playbook-review p { margin-block: 10px; }
+.playbook-review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.playbook-review-row { min-width: 0; border: 1px solid var(--border); padding: 14px; border-radius: 6px; }
+.playbook-review pre { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 100%; font-size: 11px; }
+.playbook-review-label, .playbook-review-source { font-size: 11px; color: var(--muted); }
+.playbook-review-reason { border-left: 3px solid var(--accent); padding-left: 10px; }
+.playbook-review-warning { border: 1px solid var(--warning); padding: 12px; }
+.playbook-review-form { margin-block: 18px; padding: 16px; border: 2px solid var(--accent); border-radius: 6px; }
+.playbook-review-form label { display: block; margin-top: 12px; font-weight: 600; }
+.playbook-review-form :is(input, textarea) { display: block; width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); background: var(--surface); border-radius: 5px; color: var(--foreground); font: inherit; }
+.playbook-review-form :is(input, textarea):focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.playbook-review-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-block: 14px; }
+.playbook-review-error { color: var(--error); font-size: 12px; }
 .tsa-health-summary { margin-top: 28px; padding: clamp(16px, 3vw, 26px); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow-wrap: anywhere; }
 .tsa-count-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 12px; margin-block: 18px; }
 .tsa-count-grid > div { border: 1px solid var(--border); border-radius: 6px; padding: 14px; }

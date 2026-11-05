@@ -25,7 +25,12 @@ function edit(s: Awaited<ReturnType<typeof setup>>, kind: "activity" | "mileston
 }
 try {
   await check("G2 exact REQ-043/U04.03 authority, prerequisite sources and existing protected contracts", async () => {
-    assert.match(await readFile("docs/registers/unit-register.csv", "utf8"), /U04.04,M04 Playbook,Export reviewed playbook Markdown plus structured data,U04.03,REQ-043,[^\r\n]*Markdown and JSON export carry draft caveat and current revisions/);
+    const authority = await readFile("docs/contracts/U04.04_Playbook_Reviewed_Export_Contract.md", "utf8");
+    assert.match(authority, /Dependency \*\*U04.03\*\*; \*\*REQ-043\*\*/); assert.match(authority, /Markdown and JSON export carry draft caveat and current revisions/);
+    // Approved baselines are deliberately untracked/local-only. Check exact
+    // authority when present; clean hosted clones verify the committed contract.
+    try { assert.match(await readFile("docs/registers/unit-register.csv", "utf8"), /U04.04,M04 Playbook,Export reviewed playbook Markdown plus structured data,U04.03,REQ-043,[^\r\n]*Markdown and JSON export carry draft caveat and current revisions/); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; console.log("INFO: Local-only approved register absent in clean clone; G2 preflight/hash evidence remains in U04.04_VALIDATION.md. Committed contract checks remain required."); }
     for (const p of ["docs/contracts/U04.01_Playbook_Contract.md", "docs/contracts/U04.02_Playbook_Guarded_Generation_Contract.md", "docs/contracts/U04.03_Playbook_Review_Edit_Contract.md", "lib/server/playbook/review-source.ts"]) assert.ok((await readFile(p, "utf8")).length);
   });
   await check("real issued owner required; clone/import/schema/boolean/null/stale-binding/forged-permit bypasses refused", async () => {

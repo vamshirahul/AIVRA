@@ -11,6 +11,16 @@ import { calculateCSE } from "../lib/cost-synergy/calculation.ts";
 import { buildHealthMetrics, isCurrentHealthMetrics } from "../lib/server/integration-health/metrics.ts";
 import type { HealthSources } from "../lib/server/integration-health/metrics.ts";
 
+export async function healthFixture() {
+  const p = await fixture(true), i = p.read(), context = prepareCSEContext(i.outcome, i.captured_session, i.current_session, i.review); assert.ok(context);
+  const draft = createEstimateDraft(context); draft.horizon = "2"; draft.actions[0].included = true;
+  for (const field of ["annual_run_rate", "migration_one_time_cost", "transition_overlap_cost"] as const) draft.actions[0][field] = { amount: "0", note: "Explicit fabricated visitor zero for offline test" };
+  const built = buildEstimateRequest(context, draft); assert.ok(built.ok); const result = calculateCSE(built.request, context); assert.notEqual(result.status, "invalid");
+  const base: HealthSources = { session: i.current_session, ala: { outcome: i.outcome, captured_session: i.captured_session, review: i.review }, estimate: { result, draft }, playbook: { source: p.source, review: p.draft } };
+  return { p, i, context, draft, result, base };
+}
+
+if (process.argv[1]?.replaceAll("\\", "/").endsWith("/check-health-metrics.mts")) {
 let groups = 0, network = 0; const saved = globalThis.fetch;
 globalThis.fetch = async () => { network++; throw Error("Offline dashboard metrics forbid external requests"); };
 const accepted = (read: () => HealthSources | null) => { const result = buildHealthMetrics(read); assert.ok(result.ok, JSON.stringify(result)); return result.metrics; };
@@ -26,11 +36,7 @@ try {
     assert.equal(m.reviewed_suggestions.state, "not_recorded"); assert.equal(m.reviewed_suggestions.value, null); assert.equal(JSON.stringify(s), before); assert.ok(Object.isFrozen(m.source.input_revisions));
     const empty = structuredClone(s); empty.current_deal.tsa_services = []; assert.equal(accepted(() => ({ session: empty })).tsa.value?.total, 0);
   });
-  const p = await fixture(true), i = p.read(), context = prepareCSEContext(i.outcome, i.captured_session, i.current_session, i.review); assert.ok(context);
-  const draft = createEstimateDraft(context); draft.horizon = "2"; draft.actions[0].included = true;
-  for (const field of ["annual_run_rate", "migration_one_time_cost", "transition_overlap_cost"] as const) draft.actions[0][field] = { amount: "0", note: "Explicit fabricated visitor zero for offline test" };
-  const built = buildEstimateRequest(context, draft); assert.ok(built.ok); const result = calculateCSE(built.request, context); assert.notEqual(result.status, "invalid");
-  const base: HealthSources = { session: i.current_session, ala: { outcome: i.outcome, captured_session: i.captured_session, review: i.review }, estimate: { result, draft }, playbook: { source: p.source, review: p.draft } };
+  const { p, i, context, draft, result, base } = await healthFixture();
   await check("validated upstream metrics retain original/review distinction, exact CSE totals/units, draft activities and provenance without invocation", () => {
     const before = JSON.stringify(base), calls = p.calls(), m = accepted(() => base); assert.ok(m.ala.value && m.playbook.value);
     const findings = i.outcome.status !== "error" ? i.outcome.envelope.data.findings : []; assert.equal(m.ala.value.original_action_rows, findings.reduce((n, f) => n + f.actions.length, 0));
@@ -83,3 +89,5 @@ try {
   await mkdir(".temp/u13-01", { recursive: true }); await writeFile(".temp/u13-01/metrics-tests.json", JSON.stringify({ groups, external_requests: network, source_session_id: i.current_session.session_id }, null, 2));
   console.log(`PASS: ${groups} U13.01 groups; source-traceable metrics, explicit missing values, no provider calls by projection.`);
 } finally { globalThis.fetch = saved; }
+
+}

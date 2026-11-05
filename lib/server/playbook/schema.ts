@@ -1,10 +1,10 @@
 import "server-only";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
-import { MAX_INPUT_BYTES, MAX_OUTPUT_BYTES, SourceIdSchema, resultEnvelopeSchema } from "../ai/contracts.ts";
-import type { OutputContract } from "../ai/contracts.ts";
-import { PlaybookInputSchema, PLAYBOOK_PROMPT_VERSION } from "./input.ts";
-import type { PlaybookInput } from "./input.ts";
+import { MAX_INPUT_BYTES, MAX_OUTPUT_BYTES, SourceIdSchema, resultEnvelopeSchema } from "../ai/base-contracts.ts";
+import type { OutputContract } from "../ai/base-contracts.ts";
+import { PlaybookInputSchema, PLAYBOOK_PROMPT_VERSION } from "./input-schema.ts";
+import type { PlaybookInput } from "./input-schema.ts";
 
 export const PLAYBOOK_OUTPUT_VERSION = "playbook/output/v1" as const;
 const Id = z.string().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/);

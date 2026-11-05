@@ -8,21 +8,10 @@ import { ALA_PROMPT_VERSION } from "./prompt.ts";
 import { ALASourceTokenSchema, buildALARequest } from "./request.ts";
 import { ALA_OUTPUT_CONTRACT, ALAResultSchema, inspectALAResult } from "./schema.ts";
 
-const SideCoverage = z.strictObject({
-  source_count: z.number().int().min(0).max(50), accounted_count: z.number().int().min(0).max(50),
-  missing_app_ids: z.array(SourceIdSchema).max(50), not_evaluated_app_ids: z.array(SourceIdSchema).max(50),
-});
-const Coverage = z.strictObject({ status: z.enum(["complete", "incomplete"]),
-  reasons: z.array(z.enum(["missing_applications", "not_evaluated_applications"])).max(2), buyer: SideCoverage, target: SideCoverage });
-export const ALAActionErrorSchema = z.strictObject({ status: z.literal("error"), error: z.strictObject({
-  code: FailureCodeSchema, request_id: z.uuid().nullable(), message: z.string().min(1).max(160),
-}) });
-const Success = z.strictObject({ status: z.enum(["success", "incomplete"]),
-  envelope: resultEnvelopeSchema(ALAResultSchema), coverage: Coverage, source_token: ALASourceTokenSchema });
-export const ALAAnalyzeOutcomeSchema = z.union([ALAActionErrorSchema, Success]).superRefine((value, context) => {
-  if (value.status !== "error" && ((value.status === "success") !== (value.coverage.status === "complete") || value.envelope.module !== "ala" || value.envelope.prompt_version !== ALA_PROMPT_VERSION)) context.addIssue({ code: "custom", message: "ALA outcome identity/coverage mismatch" });
-});
-export type ALAAnalyzeOutcome = z.infer<typeof ALAAnalyzeOutcomeSchema>;
+import { ALAActionErrorSchema, ALAAnalyzeOutcomeSchema } from "./outcome-schema.ts";
+import type { ALAAnalyzeOutcome } from "./outcome-schema.ts";
+export { ALAActionErrorSchema, ALAAnalyzeOutcomeSchema } from "./outcome-schema.ts";
+export type { ALAAnalyzeOutcome } from "./outcome-schema.ts";
 function safeError(code: FailureCode, requestId: string | null = null): z.infer<typeof ALAActionErrorSchema> {
   // Existing server-owned fixed messages, never an injected router/provider message.
   const safe = failure(code, requestId ?? "00000000-0000-4000-8000-000000000000");

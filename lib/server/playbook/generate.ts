@@ -15,20 +15,11 @@ import type { PlaybookInput } from "./input-schema.ts";
 import { buildPlaybookInvocation } from "./request.ts";
 import { PLAYBOOK_OUTPUT_CONTRACT, PlaybookEnvelopeSchema, PlaybookResultSchema, inspectPlaybookResult } from "./schema.ts";
 
-const Operation = z.enum(["generate", "regenerate"]);
+import { PlaybookErrorSchema, PlaybookOutcomeSchema } from "./outcome-schema.ts";
+import type { PlaybookOutcome } from "./outcome-schema.ts";
+export { PlaybookErrorSchema, PlaybookOutcomeSchema } from "./outcome-schema.ts";
+export type { PlaybookOutcome } from "./outcome-schema.ts";
 const LocalCode = z.enum(["source_changed", "invalid_previous_draft"]);
-export const PlaybookErrorSchema = z.strictObject({ status: z.literal("error"), error: z.strictObject({
-  code: z.union([FailureCodeSchema, LocalCode]), request_id: z.uuid().nullable(), message: z.string().min(1).max(160),
-}) });
-const Coverage = z.strictObject({ status: z.enum(["complete", "incomplete"]), missing_app_ids: z.array(SourceIdSchema).max(100),
-  missing_tsa_ids: z.array(SourceIdSchema).max(100), missing_action_ids: z.array(SourceIdSchema).max(200),
-  not_addressed: PlaybookResultSchema.shape.not_addressed, incomplete_context: PlaybookInputSchema.shape.incomplete_context });
-export const PlaybookOutcomeSchema = z.union([PlaybookErrorSchema, z.strictObject({ status: z.enum(["success", "incomplete"]),
-  operation: Operation, envelope: PlaybookEnvelopeSchema, coverage: Coverage, source: PlaybookInputSchema.shape.source,
-})]).superRefine((r, ctx) => {
-  if (r.status !== "error" && ((r.status === "success") !== (r.coverage.status === "complete") || r.coverage.status !== r.envelope.data.coverage_status)) ctx.addIssue({ code: "custom", message: "Playbook outcome coverage mismatch" });
-});
-export type PlaybookOutcome = z.infer<typeof PlaybookOutcomeSchema>;
 type Accepted = Exclude<PlaybookOutcome, { status: "error" }>;
 export type PlaybookSourceReader = () => PlaybookInputs | null;
 const Caller = z.strictObject({ client_key: z.string().regex(/^[a-f0-9]{64}$/) });
@@ -67,7 +58,7 @@ export function createPlaybookGenerator(options: Parameters<typeof createAIRoute
     try { const captured = prior && typeof prior === "object" ? issued.get(prior) : null, latest = readSource(); return !!captured && !!latest && matchesPlaybookInput(captured, latest); }
     catch { return false; }
   }
-  async function run(operation: z.infer<typeof Operation>, readSource: PlaybookSourceReader, caller: unknown, prior?: unknown): Promise<PlaybookOutcome> {
+  async function run(operation: "generate" | "regenerate", readSource: PlaybookSourceReader, caller: unknown, prior?: unknown): Promise<PlaybookOutcome> {
     const requestId = randomUUID(); // Never caller-selected or reused by regeneration.
     try {
       if (operation === "regenerate" && (!prior || typeof prior !== "object" || !issued.has(prior))) return safeError("invalid_previous_draft", requestId);

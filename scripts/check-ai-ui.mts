@@ -54,7 +54,7 @@ try {
     const html = render({ status: "completed", resultMetadata: invalid as never });
     assert.match(html, /AI unavailable/); assert.doesNotMatch(html, /<script|visitor_override|provider_failed|Provider:/);
   }
-  const server = await readFile("lib/server/ai/contracts.ts", "utf8");
+  const server = await readFile("lib/server/ai/base-contracts.ts", "utf8");
   const codes = [...server.match(/FailureCodeSchema = z.enum\(\[([^\]]+)\]/)![1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1]);
   assert.deepEqual(Object.keys(AI_ERROR_COPY).sort(), codes.sort());
   for (const safeErrorCode of Object.keys(AI_ERROR_COPY) as (keyof typeof AI_ERROR_COPY)[]) {

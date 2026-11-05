@@ -2,8 +2,8 @@ import "server-only";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { ApplicationSchema, LicensePositionSchema } from "../../contracts/demo.ts";
-import { MAX_OUTPUT_BYTES, SourceIdSchema } from "../ai/contracts.ts";
-import type { OutputContract } from "../ai/contracts.ts";
+import { MAX_OUTPUT_BYTES, SourceIdSchema } from "../ai/base-contracts.ts";
+import type { OutputContract } from "../ai/base-contracts.ts";
 
 const text = (max: number) => z.string().min(1).max(max).refine((v) => v.trim().length > 0, "Nonblank text required");
 const Finding = z.strictObject({

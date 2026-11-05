@@ -371,3 +371,29 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
   .menu-toggle { padding: 8px 10px; min-height: 40px; }
   #main-content { padding-inline: 16px; }
 }
+
+/* U13.02 uses existing A1 tokens; source counts are not health scores. */
+.health-dashboard { margin-top: 28px; min-width: 0; overflow-wrap: anywhere; }
+.health-intro h2 { margin-block: 14px 8px; font-size: 23px; font-weight: 650; }
+.health-intro p, .health-panel > p { color: var(--muted); font-size: 13px; line-height: 1.8; }
+.health-availability { margin-block: 20px; padding: 14px 16px; background: var(--accent-soft); border-left: 3px solid var(--accent); font-size: 13px; line-height: 1.8; }
+.health-panels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+.health-panel { min-width: 0; padding: clamp(16px, 2vw, 24px); border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.health-panel h2 { font-size: 18px; font-weight: 650; margin-bottom: 8px; }
+.health-panel h3 { font-size: 13px; font-weight: 650; }
+.health-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 165px), 1fr)); gap: 12px; margin-block: 18px; }
+.health-tile { min-width: 0; padding: 14px; border: 1px solid var(--border); border-radius: 7px; }
+.health-tile dt { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.health-tile dd { font-size: clamp(17px, 1.5vw, 22px); font-weight: 650; margin-block: 10px 4px; overflow-wrap: anywhere; }
+.health-unit, .health-state { display: block; font-size: 11px; line-height: 1.7; color: var(--muted); }
+.health-state { margin-top: 8px; font-weight: 650; }
+.health-tile[data-state=current] .health-state { color: var(--accent); }
+.health-tile[data-state=incomplete] .health-state, .health-warning { color: var(--warning); }
+.health-tile p { font-size: 11px; line-height: 1.7; margin-top: 10px; color: var(--muted); }
+.health-links { display: flex; flex-wrap: wrap; gap: 12px 20px; }
+.health-panel .text-link { display: inline-block; padding-block: 10px; font-size: 13px; }
+.health-warning { margin-block: 14px; padding: 12px; background: var(--warning-surface); border-left: 3px solid var(--warning); font-size: 12px; line-height: 1.8; }
+.health-warning ul { list-style: disc; padding-left: 18px; }
+.health-dashboard .tsa-health-summary { margin: 0; padding: 0; border: 0; background: none; }
+.health-dashboard .tsa-count-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); }
+@media (max-width: 850px) { .health-panels { grid-template-columns: minmax(0, 1fr); } }

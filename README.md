@@ -50,7 +50,7 @@ read-only Buyer/Target application inventory preview; Application Rationalizatio
 has a readiness-only Analyze action, License Optimizer shows the shared read-only
 license inventory, TSA Tracker shows current linked synthetic services, and Cost
 Synergy and Scenario Modeling have readiness workspaces.
-Integration Health shows current TSA source counts; its other sections remain planned.
+Integration Health shows validated application/TSA counts and explicit unavailable states for protected analysis, estimates and Playbook results.
 The Assistant has a question-preparation workspace with Ask unavailable; Playbook has an availability-only
 Generate action. Live AI remains disabled.
 
@@ -604,3 +604,24 @@ Run `npm run check:health-metrics` (also in CI). See the
 [metrics contract](docs/contracts/U13.01_Health_Metrics_Contract.md) and
 [validation](U13.01_VALIDATION.md). Live AI and protected public result delivery
 remain separately gated; the existing public TSA summary is unchanged.
+
+## Integration Health tiles (U13.02)
+
+`/integration-health` now presents responsive A1 Coastal Navy tiles and existing
+module overview links. Public application/side counts come from the validated
+shared session; the existing TSA summary appears once and keeps its original
+source-status calculations. Protected ALA, financial and Playbook results remain
+unavailable until approved delivery exists. No fake values or health score is shown.
+
+The typed function-bearing presentation source rechecks U13.01 owner currentness
+and actual session matching; it is not a serialized authorization grant or public
+endpoint. Isolated tests display actual offline U13.01 snapshots. Missing values,
+valid zero, incomplete evidence, signed CAD and recorded visitor proposals retain
+separate meanings. Owner notifications hide revoked snapshots even when identity
+is unchanged. No storage, polling, Refresh action or AI invocation is added.
+
+Run `npm run check:health-dashboard` (also in CI). The existing Chromium/CDP pattern
+is used by `node scripts/check-health-dashboard-browser.mjs` with installed Chrome
+via `AIVRA_CHROMIUM_PATH`; add `AIVRA_BASE_URL` for the final local production page.
+See [the UI contract](docs/contracts/U13.02_Health_Dashboard_UI_Contract.md) and
+[validation](U13.02_VALIDATION.md). U13.03's broader update acceptance remains deferred.

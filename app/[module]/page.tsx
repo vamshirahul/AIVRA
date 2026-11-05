@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Arrow, Badge, ButtonLink, Card } from "../../components/ui";
 import { workspaceModules } from "../../lib/workspace/routes";
 import { AIStatusNotice } from "../../components/ai/ai-status-notice";
 import { SampleInventoryPreview } from "../../components/data-mapper/sample-inventory-preview";
@@ -10,7 +9,7 @@ import { LicenseInventory } from "../../components/license-optimizer/license-inv
 import { CostSynergyEstimateWorkspace } from "../../components/cost-synergy/estimate-workspace";
 import { ScenarioWorkspace } from "../../components/scenario-modeling/scenario-workspace";
 import { TSAInventory } from "../../components/tsa-tracker/tsa-inventory";
-import { TSAHealthSummary } from "../../components/integration-health/tsa-health-summary";
+import { HealthDashboard } from "../../components/integration-health/dashboard";
 import { AssistantWorkspace } from "../../components/ai-assistant/assistant-workspace";
 import { GeneratePlaybook } from "../../components/playbook-generator/generate-playbook";
 
@@ -33,9 +32,6 @@ export async function generateMetadata({ params }: { params: Promise<{ module: s
 export default async function ModulePage({ params }: { params: Promise<{ module: string }> }) {
   const module = await getModule(params);
   if (!module) notFound();
-  const related = workspaceModules.filter((item) => item.href !== module.href && item.group === module.group);
-  const next = related[0] ?? workspaceModules.find((item) => item.href === "/data-mapper")!;
-
   return (
     <div className="page-container">
       <p className="breadcrumb"><Link href="/">Home</Link><span aria-hidden="true">/</span><span>{module.group}</span></p>
@@ -43,23 +39,8 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
       <h1 className="page-title">{module.title}</h1>
       <p className="page-description">{module.purpose}</p>
       {["/license-optimizer"].includes(module.href) && <AIStatusNotice state={{ status: "not_enabled" }} />}
-      {module.href === "/integration-health" && <TSAHealthSummary />}
 
-      {module.href === "/data-mapper" ? <SampleInventoryPreview /> : module.href === "/application-rationalization" ? <AnalyzeApplications /> : module.href === "/license-optimizer" ? <LicenseInventory /> : module.href === "/cost-synergy" ? <CostSynergyEstimateWorkspace /> : module.href === "/scenario-modeling" ? <ScenarioWorkspace /> : module.href === "/tsa-tracker" ? <TSAInventory /> : module.href === "/playbook-generator" ? <GeneratePlaybook /> : module.href === "/ai-assistant" ? <AssistantWorkspace /> : <>
-      <Card className="mt-9 px-6 py-9 sm:p-10">
-        <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-lg border border-border bg-background text-muted" aria-hidden="true">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>
-        </div>
-        <Badge>{module.href === "/integration-health" ? "Additional sections planned" : "Not yet implemented"}</Badge>
-        <h2 className="mt-5 mb-3 text-xl font-semibold tracking-tight">{module.href === "/integration-health" ? "More integration insights" : "A place for the next part of your workflow"}</h2>
-        <p className="max-w-xl text-sm leading-7 text-muted">{module.href === "/integration-health" ? "The TSA section above reflects current source counts. Application, financial and planning summaries remain unavailable; no integration health score is calculated." : "This module currently provides an introduction only. Its tools, interactions and results are not yet implemented. No analysis has been run and no output is available."}</p>
-        <div className="mt-8 flex flex-wrap gap-3">
-          <ButtonLink href="/" secondary>Back to overview</ButtonLink>
-          {next.href !== module.href && <ButtonLink href={next.href}>Explore {next.title} <Arrow /></ButtonLink>}
-        </div>
-      </Card>
-      <p className="mt-5 text-xs leading-6 text-muted">{module.href === "/integration-health" ? "TSA counts are source observations. Broader dashboard capabilities remain planned." : "You can explore the other module introductions from the workspace navigation. AI integration is planned."}</p>
-      </>}
+      {module.href === "/integration-health" ? <HealthDashboard /> : module.href === "/data-mapper" ? <SampleInventoryPreview /> : module.href === "/application-rationalization" ? <AnalyzeApplications /> : module.href === "/license-optimizer" ? <LicenseInventory /> : module.href === "/cost-synergy" ? <CostSynergyEstimateWorkspace /> : module.href === "/scenario-modeling" ? <ScenarioWorkspace /> : module.href === "/tsa-tracker" ? <TSAInventory /> : module.href === "/playbook-generator" ? <GeneratePlaybook /> : module.href === "/ai-assistant" ? <AssistantWorkspace /> : null}
     </div>
   );
 }

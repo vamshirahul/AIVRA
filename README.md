@@ -476,6 +476,28 @@ See the [export contract](docs/contracts/U04.04_Playbook_Reviewed_Export_Contrac
 and [validation](U04.04_VALIDATION.md). Protected public delivery and integrated
 live-quality/accessibility/release UAT remain separate future work.
 
+## Assistant context/reference contract (U10.01 — in review)
+
+The server-only `assistant/context/v1` builder assembles current synthetic source
+records plus available validated ALA/review, license findings, visitor financial
+assumptions and original/reviewed Playbook content. Original AI drafts, provenance,
+uncertainty and visitor changes remain separate. Absent, stale, invalid, unavailable
+and incomplete sections receive explicit labels; no facts or answers are fabricated.
+
+An authoritative current-source reader, issued snapshot ownership and full-context
+freshness checks protect the bounded typed reference catalog. Context plus fixed
+server instructions must fit the existing 128,000 UTF-8 byte limit; catalog/citations
+are bounded to 400 without truncation. Instructions stay separate from untrusted
+source text. No AI call, question box, history, endpoint, UI or persistence is added.
+The public Assistant remains an introduction with AI disabled. U10.02 owns Ask and
+typed gateway integration; U10.03 owns chat presentation. This domain contract is
+not an invocation and cannot bypass the guarded router or enable live providers.
+
+Run `npm run check:assistant-context` (also in `check:ci`). See the
+[contract](docs/contracts/U10.01_Assistant_Context_Reference_Contract.md) and
+[validation](U10.01_VALIDATION.md) for exact G2 scope, authority boundaries,
+offline evidence, remaining live gates and rollback.
+
 ## AI budget and fallback foundation (U00.07 — in review)
 
 The internal router now supports independently capped paid/fallback paths,

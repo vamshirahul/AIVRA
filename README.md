@@ -405,8 +405,8 @@ hypotheses separately, with explicit missing context and source freshness checks
 
 The U04.02 guarded generation foundation now carries this domain input through a
 strict Playbook-only structured context. Public AI remains disabled. U04.03 now
-provides an isolated, source-authorized review workspace; Markdown/JSON exports
-remain U04.04 work.
+provides an isolated, source-authorized review workspace; U04.04 adds explicit
+reviewed Markdown/JSON exports below.
 Run `npm run check:playbook-contract` (also in `check:ci`). See the
 [contract](docs/contracts/U04.01_Playbook_Contract.md) and
 [validation](U04.01_VALIDATION.md) for trust boundaries and limits.
@@ -449,10 +449,32 @@ are discarded on navigation, refresh or Reset; no storage/persistence was added.
 The public page has no protected result source and shows an unavailable review
 notice. No fabricated activities or editor are exposed; the existing availability
 button and unconditional503 endpoint remain. Populated tests run in an isolated
-loopback harness outside Next's routes/build. U04.04 exports and live activation
-remain deferred. Run `npm run check:playbook-review` (also in CI). See the
+loopback harness outside Next's routes/build. Reviewed exports are described below;
+live activation remains deferred. Run `npm run check:playbook-review` (also in CI). See the
 [review contract](docs/contracts/U04.03_Playbook_Review_Edit_Contract.md) and
 [validation](U04.03_VALIDATION.md).
+
+## Reviewed Playbook exports (U04.04 — in review)
+
+A genuine current owner-issued Playbook and saved review can explicitly download
+**Markdown and JSON**. `playbook/review-export/v1` keeps the complete original AI
+outcome/provenance/evidence separate from visitor patches and phase-ordered effective
+activities/milestones. Both files use one frozen current capture, retain incomplete
+coverage/unknowns/current revisions and prominently remain illustrative/unapproved.
+Markdown treats model/visitor strings as literal escaped text; JSON preserves
+exact text/null/order. Fixed filenames and a 1,500,000 UTF-8 byte cap apply separately
+to capture and each format, without changing model or review limits.
+
+Open edits, stale/unauthorized/invalid sources, changed sessions/drafts and revoked
+permits prevent downloads. Browser errors retain review data and report failure.
+Public source remains absent: no fake results or download buttons appear,
+and Playbook availability remains503/no-store. Nothing activates AI or persistence.
+Run `npm run check:playbook-export` (also in CI). Optional isolated Chromium:
+`node scripts/check-playbook-review-browser.mjs --export`; set installed
+`AIVRA_CHROMIUM_PATH` and a loopback `AIVRA_BASE_URL` for real production-page checks.
+See the [export contract](docs/contracts/U04.04_Playbook_Reviewed_Export_Contract.md)
+and [validation](U04.04_VALIDATION.md). Protected public delivery and integrated
+live-quality/accessibility/release UAT remain separate future work.
 
 ## AI budget and fallback foundation (U00.07 — in review)
 

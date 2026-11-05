@@ -14,7 +14,7 @@ import { createPlaybookReviewDraft, validatePlaybookReviewDraft, PlaybookReviewD
 import { POST } from "../app/api/ai/playbook/route.ts";
 
 // Fabricated protected outcomes/policies/roles/dates, isolated offline tests ONLY.
-async function fixture(incomplete = false, many = false) {
+export async function fixture(incomplete = false, many = false) {
   const seed = setup(); let latest = structuredClone(seed.inputs), calls = 0; const listeners = new Set<() => void>();
   const prepared = preparePlaybookContract(latest); assert.ok(prepared.ok);
   const output = specimen(prepared.input), refs = output.actions.flatMap(a => a.source_refs);
@@ -47,6 +47,7 @@ function proposal(f: Awaited<ReturnType<typeof fixture>>, kind: "activity" | "mi
   return { binding: playbookReviewBinding(f.source)!, kind, id, values: { ...row.values }, visitor_reason: "Fabricated visitor justification" };
 }
 function saved(r: ReturnType<typeof savePlaybookEdit>) { assert.ok(r.ok, JSON.stringify(r)); return r.draft; }
+if (process.argv[1]?.replaceAll("\\", "/").endsWith("/check-playbook-review.mts")) {
 let groups = 0, network = 0; const savedFetch = globalThis.fetch; globalThis.fetch = async () => { network++; throw Error("Review tests forbid network"); };
 async function check(name: string, run: () => unknown | Promise<unknown>) { await run(); groups++; console.log(`PASS: ${name}`); }
 try {
@@ -112,8 +113,10 @@ try {
   await check("public503/source absence, no client server runtime/network/storage/export and original safety boundaries", async () => {
     let reads = 0; const r = (POST as (request?: unknown) => Response)(new Proxy({}, { get() { reads++; throw Error("No request reads"); } })); assert.equal(r.status, 503); assert.equal(r.headers.get("cache-control"), "no-store"); assert.equal(reads, 0);
     const child = spawnSync(process.execPath, ["--input-type=module", "-e", "await import('./lib/server/playbook/review-source.ts')"], { encoding: "utf8", timeout: 5000 }); assert.notEqual(child.status, 0); assert.match(child.stderr, /server-only|Client Component/);
-    for (const file of ["lib/playbook-generator/review-draft.ts", "components/playbook-generator/playbook-review-workspace.tsx"]) { const text = (await readFile(file, "utf8")).replace(/^import type .*$/gm, ""); assert.doesNotMatch(text, /server\/|server-only|fetch\(|localStorage|sessionStorage|indexedDB|dangerouslySetInnerHTML|createObjectURL|download|process\.env|console\./); }
+    for (const file of ["lib/playbook-generator/review-draft.ts", "components/playbook-generator/playbook-review-workspace.tsx"]) { const text = (await readFile(file, "utf8")).replace(/^import type .*$/gm, ""); assert.doesNotMatch(text, /server\/|server-only|fetch\(|localStorage|sessionStorage|indexedDB|dangerouslySetInnerHTML|createObjectURL|process\.env|console\./); }
     assert.equal(createPlaybookReviewDraft(null), null); assert.equal(network, 0);
   });
   console.log(`PASS: ${groups} U04.03 groups; issued-source review, strict visitor overlays, immutable originals, stale revocation and zero network.`);
 } finally { globalThis.fetch = savedFetch; }
+
+}

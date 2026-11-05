@@ -10,9 +10,11 @@ import { createServer } from "node:http";
 import ts from "typescript";
 
 assert.ok(process.env.AIVRA_CHROMIUM_PATH, "Set installed Chromium path");
-const output = ".temp/u13-02", fixture = JSON.parse(await readFile(`${output}/fixtures.json`, "utf8"));
+const walkthrough = process.env.AIVRA_SYNTHETIC_WALKTHROUGH === "1";
+const output = walkthrough ? ".temp/u90-01" : ".temp/u13-02", fixture = JSON.parse(await readFile(".temp/u13-02/fixtures.json", "utf8"));
 const updates = process.env.AIVRA_HEALTH_UPDATES ? JSON.parse(await readFile('.temp/u13-03/updates.json','utf8')) : null;
-const updatesOnly = process.env.AIVRA_HEALTH_UPDATES_ONLY === '1';
+const updatesOnly = walkthrough || process.env.AIVRA_HEALTH_UPDATES_ONLY === '1';
+const downloads = [], completedDownloads = new Set();
 // Same small local React/TS bundler and CDP pattern as existing module harnesses.
 const root = process.cwd(), modules = [], ids = new Map();
 function bundleModule(file, source) {
@@ -51,12 +53,12 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 const server = createServer((req, res) => { const url = new URL(req.url, "http://127.0.0.1"); if (url.pathname === "/bundle.js") { res.setHeader("content-type", "text/javascript"); res.end(bundle); } else if (url.pathname === "/") { res.setHeader("content-type", "text/html"); res.end(html); } else { res.statusCode = 404; res.end(); } });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve)); const offlineURL = `http://127.0.0.1:${server.address().port}/`;
 const profile = await mkdtemp(path.join(tmpdir(), "aivra-health-dashboard-")), browser = spawn(process.env.AIVRA_CHROMIUM_PATH, ["--headless", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true });
-const evidence = { checks: [], runtimeErrors: [], externalRequests: [], apiRequests: [], screenshots: [], limitations: "Isolated fabricated result displays only; public protected-result delivery remains unavailable. Keyboard/AX/DOM checks are not full WCAG/screen-reader or physical-device UAT." };
+const evidence = { checks: [], runtimeErrors: [], externalRequests: [], apiRequests: [], screenshots: [], limitations: walkthrough ? "Actual public subset only; protected result delivery and live execution remain BLOCKED. Keyboard/DOM checks are not full WCAG/screen-reader or physical-device UAT." : "Isolated fabricated result displays only; public protected-result delivery remains unavailable. Keyboard/AX/DOM checks are not full WCAG/screen-reader or physical-device UAT." };
 let socket, serial = 0; const pending = new Map();
 try {
   const endpoint = await new Promise((resolve, reject) => { let stderr = ""; const timer = setTimeout(() => reject(Error("Chrome timeout")), 15000); browser.once("error", reject); browser.stderr.on("data", b => { stderr += b; const m = stderr.match(/DevTools listening on (ws:\/\/[^\s]+)/); if (m) { clearTimeout(timer); resolve(m[1]); } }); });
   socket = new WebSocket(endpoint); await new Promise((resolve, reject) => { socket.addEventListener("open", resolve, { once: true }); socket.addEventListener("error", reject, { once: true }); });
-  socket.addEventListener("message", ({ data }) => { const m = JSON.parse(data); if (m.method === "Runtime.exceptionThrown") evidence.runtimeErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text); if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") evidence.runtimeErrors.push(m.params.args.map(a => a.description ?? a.value).join(" ")); if(m.method === "Network.requestWillBeSent" && /^https?:/.test(m.params.request.url) && new URL(m.params.request.url).pathname.startsWith("/api/")) evidence.apiRequests.push(m.params.request.url); if (m.method === "Network.requestWillBeSent" && /^https?:/.test(m.params.request.url) && !/^http:\/\/(127\.0\.0\.1|localhost):/.test(m.params.request.url)) evidence.externalRequests.push(m.params.request.url); if (!m.id) return; const wait = pending.get(m.id); if (!wait) return; pending.delete(m.id); clearTimeout(wait.timer); m.error ? wait.reject(Error(JSON.stringify(m.error))) : wait.resolve(m.result); });
+  socket.addEventListener("message", ({ data }) => { const m = JSON.parse(data); if(m.method === "Browser.downloadWillBegin") downloads.push(m.params); if(m.method === "Browser.downloadProgress" && m.params.state === "completed") completedDownloads.add(m.params.guid); if (m.method === "Runtime.exceptionThrown") evidence.runtimeErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text); if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") evidence.runtimeErrors.push(m.params.args.map(a => a.description ?? a.value).join(" ")); if(m.method === "Network.requestWillBeSent" && /^https?:/.test(m.params.request.url) && new URL(m.params.request.url).pathname.startsWith("/api/")) evidence.apiRequests.push(m.params.request.url); if (m.method === "Network.requestWillBeSent" && /^https?:/.test(m.params.request.url) && !/^http:\/\/(127\.0\.0\.1|localhost):/.test(m.params.request.url)) evidence.externalRequests.push(m.params.request.url); if (!m.id) return; const wait = pending.get(m.id); if (!wait) return; pending.delete(m.id); clearTimeout(wait.timer); m.error ? wait.reject(Error(JSON.stringify(m.error))) : wait.resolve(m.result); });
   function send(method, params = {}, sessionId) { return new Promise((resolve, reject) => { const id = ++serial, timer = setTimeout(() => { pending.delete(id); reject(Error(method)); }, 15000); pending.set(id, { resolve, reject, timer }); socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) })); }); }
   const { targetId } = await send("Target.createTarget", { url: "about:blank" }), { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true }); const page = (m, p) => send(m, p, sessionId);
   async function evaluate(expression) { const r = await page("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw Error(JSON.stringify(r.exceptionDetails)); return r.result.value; }
@@ -123,7 +125,7 @@ try {
       await key('Enter',13);await waitFor("location.pathname==='/application-rationalization'");assert.equal(await evaluate('sessionStorage.getItem("aivra:r0:demo-session:v1")'),before);
     }
 
-    if(updates){
+    if(updates||walkthrough){
       await page('Page.navigate',{url:base+'/tsa-tracker'});await waitFor("document.querySelectorAll('.tsa-inventory tbody tr').length===5");
       const savedSession=await evaluate('sessionStorage.getItem("aivra:r0:demo-session:v1")');
       await evaluate(`(()=>{const select=document.querySelector('.tsa-toolbar select[id$="-filter"]');select.value='active';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);await waitFor("document.body.textContent.includes('No TSA services match this status filter')");
@@ -133,12 +135,44 @@ try {
       await evaluate(`(()=>{const select=document.querySelector('.tsa-edit-panel [name="status"]');select.value='active';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Save').focus()");await key('Enter',13);await waitFor("!document.querySelector('.tsa-edit-panel')");
       await evaluate("document.querySelector('nav a[href=\"/integration-health\"]').click()");await waitFor("document.querySelector('[data-tsa-count=active]')?.textContent==='1'");assert.deepEqual(await evaluate("[...document.querySelectorAll('[data-tsa-count]')].map(n=>Number(n.textContent))"),[5,4,1,0,0]);
       await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Reset demo session').focus()");await key('Enter',13);await waitFor("document.activeElement.textContent==='Confirm reset'");await key('Enter',13);await waitFor("document.querySelector('[data-tsa-count=planned]')?.textContent==='5'");assert.equal(await metric('Total applications'),'30');assert.equal(await metric('Illustrative net benefit'),'Not available');assert.equal(await evaluate("document.querySelectorAll('[data-tsa-count]').length"),5);
-      evidence.checks.push('U13.03 final public app: TSA filter/navigation does not alter portfolio counts or saved data; keyboard Edit/Save status updates counts on return, keyboard Reset restores current inventory without protected fake data.');
+      evidence.checks.push('Public shared-session path: TSA filter/navigation does not alter portfolio counts or saved data; keyboard Edit/Save status updates counts on return, keyboard Reset restores current inventory without protected fake data.');
+    }
+    if(walkthrough){
+      const saved=()=>evaluate('JSON.parse(sessionStorage.getItem("aivra:r0:demo-session:v1"))');
+      const rootSession=await saved();
+      await page('Page.navigate',{url:base+'/data-mapper'});await waitFor("document.querySelectorAll('[role=tabpanel]:not([hidden]) tbody tr').length===15");
+      assert.deepEqual(await evaluate("[...document.querySelectorAll('[role=tabpanel]:not([hidden]) tbody th')].map(n=>n.textContent)"),rootSession.current_deal.applications.filter(a=>a.company_side==='buyer').map(a=>a.app_id));
+      await evaluate("document.querySelector('[role=tab][aria-selected=true]').focus()");await key('ArrowRight',39);await waitFor("document.activeElement.textContent.includes('Target')");
+      assert.deepEqual(await evaluate("[...document.querySelectorAll('[role=tabpanel]:not([hidden]) tbody th')].map(n=>n.textContent)"),rootSession.current_deal.applications.filter(a=>a.company_side==='target').map(a=>a.app_id));
+      await page('Page.navigate',{url:base+'/license-optimizer'});await waitFor("!!document.querySelector('.license-inventory tbody tr')");
+      const licenseText=await evaluate("document.querySelector('.license-inventory').textContent");for(const row of rootSession.current_deal.license_positions){assert.ok(licenseText.includes(row.license_id));assert.ok(licenseText.includes(row.app_id));}
+      assert.deepEqual(await saved(),rootSession);
+      evidence.checks.push('U90.01 public same-tab source path: keyboard Buyer/Target preview has exact published IDs; license inventory preserves license/application identities and navigation does not mutate the session.');
+      const directory=await mkdtemp(path.resolve(output,'downloads-'));await send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:directory,eventsEnabled:true});
+      await page('Page.navigate',{url:base+'/tsa-tracker'});await waitFor("document.querySelectorAll('.tsa-inventory tbody tr').length===5");
+      for(const format of ['json','csv']){
+        const beforeDownload=downloads.length;
+        await evaluate(`[...document.querySelectorAll('button')].find(b=>b.textContent==='Download TSA ${format.toUpperCase()}').focus()`);await key('Enter',13);
+        for(let i=0;i<200&&(downloads.length===beforeDownload||!completedDownloads.has(downloads.at(-1)?.guid));i++)await new Promise(r=>setTimeout(r,50));
+        const d=downloads.at(-1);assert.ok(d&&completedDownloads.has(d.guid));assert.equal(d.suggestedFilename,`aivra-tsa-summary-v1.${format}`);
+        const content=await readFile(path.join(directory,d.suggestedFilename),'utf8');assert.ok(content.length>0);
+        if(format==='json'){const value=JSON.parse(content);assert.deepEqual(value.summary.services,rootSession.current_deal.tsa_services);assert.equal(value.summary.source.session_id,rootSession.session_id);}else for(const row of rootSession.current_deal.tsa_services)assert.ok(content.includes(row.tsa_id));
+      }
+      assert.deepEqual(await saved(),rootSession);
+      evidence.checks.push('U90.01 public exports: actual browser JSON/CSV files downloaded; JSON matches every saved TSA source record and session identity, CSV contains exact TSA IDs; no session mutation.');
+      for(const route of ['/cost-synergy','/scenario-modeling','/playbook-generator','/ai-assistant']){
+        await page('Page.navigate',{url:base+route});await waitFor("!!document.querySelector('h1')");
+        assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);
+        if(route==='/ai-assistant'){await waitFor("!!document.querySelector('.assistant-workspace')");assert.ok(await evaluate("[...document.querySelectorAll('button')].some(b=>b.textContent==='Ask Assistant'&&b.disabled)"));assert.match(await evaluate('document.body.textContent'),/unavailable|not connected|disabled/i);}
+        assert.deepEqual(await saved(),rootSession);
+      }
+      evidence.checks.push('U90.01 public downstream routes retain the same session without fabricated results; Assistant Ask stays disabled and protected/live delivery remains BLOCKED.');
+      await writeFile(`${output}/public-downloads.json`,JSON.stringify({directory,files:downloads.map(d=>d.suggestedFilename)},null,2));
     }
     const destinations={'/data-mapper':'Data Mapper Engine','/application-rationalization':'Application Rationalization','/license-optimizer':'License Optimizer','/cost-synergy':'Cost Synergy Estimator','/scenario-modeling':'Scenario / What-if Modeling','/playbook-generator':'Playbook Generator','/tsa-tracker':'TSA Tracker'};
     for(const [path,title] of Object.entries(destinations)){await page('Page.navigate',{url:base+path});await waitFor(`location.pathname===${JSON.stringify(path)} && document.querySelector('h1')?.textContent===${JSON.stringify(title)}`);}
 
     evidence.checks.push('Final production1440/390/320: real application/TSA counts once, protected ALA/CSE/Playbook unavailable, keyboard Tab/Enter overview navigation with focus and preserved session, seven inert features, no overflow or API/provider calls; destination routes load.');
   }
-  assert.deepEqual(evidence.runtimeErrors,[]);assert.deepEqual(evidence.externalRequests,[]);assert.deepEqual(evidence.apiRequests,[]);await writeFile(`${output}/browser-checks.json`,JSON.stringify(evidence,null,2));console.log(`PASS: ${evidence.checks.length} U13.02 Chromium groups; actual isolated components and optional final production dashboard.`);
+  assert.deepEqual(evidence.runtimeErrors,[]);assert.deepEqual(evidence.externalRequests,[]);assert.deepEqual(evidence.apiRequests,[]);await writeFile(`${output}/browser-checks.json`,JSON.stringify(evidence,null,2));console.log(`PASS: ${evidence.checks.length} ${walkthrough ? "U90.01" : "U13.02"} Chromium groups; ${walkthrough ? "actual public subset, full protected/live path BLOCKED" : "actual isolated components and optional final production dashboard"}.`);
 }finally{socket?.close();browser.kill();await new Promise(resolve=>server.close(resolve));}

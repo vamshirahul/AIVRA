@@ -31,7 +31,7 @@ function policy(patch: Partial<EnabledPolicy> = {}): EnabledPolicy {
     client_window_ms: 60_000, client_requests: 10, global_window_ms: 60_000, global_requests: 20, global_concurrency: 5, client_concurrency: 3,
     max_input_bytes: 128_000, max_output_tokens: 2048, input_overhead_tokens: 512, lease_ms: 5000, timeout_ms: 1000, store_timeout_ms: 50, ...patch });
 }
-function fixture(output: unknown = data(), p = policy(), generate?: StructuredTransport["generate"]) {
+export function fixture(output: unknown = data(), p = policy(), generate?: StructuredTransport["generate"]) {
   let paidCalls = 0, fallbackCalls = 0;
   const clock = () => start, store = createFakeUsageStore(clock);
   const paid: StructuredTransport = { model_provider: p.paid.model_provider, model_id: p.paid.model_id, generate: async (call) => { paidCalls++; return generate ? generate(call) : { output, usage: { inputTokens: 10, outputTokens: 5 } }; } };
@@ -41,6 +41,7 @@ function fixture(output: unknown = data(), p = policy(), generate?: StructuredTr
 function inspect(output: unknown) { return inspectLicenseResult(output, licenses, apps); }
 function rejected(output: unknown) { assert.deepEqual(inspect(output), { ok: false, code: "invalid_model_output" }); }
 function error(result: Awaited<ReturnType<ReturnType<typeof createLicenseAnalyzer>>>, code: string) { assert.ok(result.status === "error" && result.error.code === code, JSON.stringify(result)); }
+if (process.argv[1]?.replaceAll("\\", "/").endsWith("/check-license-findings.mts")) {
 let groups = 0, network = 0;
 const savedFetch = globalThis.fetch;
 globalThis.fetch = async () => { network++; throw new Error("License checks forbid network"); };
@@ -206,3 +207,5 @@ try {
   });
   console.log(`PASS: ${groups} U05.02 offline groups; fabricated outputs only, real guarded router, zero network/provider API calls, no state writes. Live quality and 200-license token feasibility unverified.`);
 } finally { globalThis.fetch = savedFetch; }
+
+}

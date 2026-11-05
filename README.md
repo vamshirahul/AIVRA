@@ -584,3 +584,23 @@ unavailable; no live model quality or protected public delivery acceptance is
 claimed. See the [acceptance contract](docs/contracts/U10.04_Assistant_Acceptance_Contract.md)
 and [validation matrix](U10.04_VALIDATION.md). No Assistant runtime, router,
 policy, session schema, dependency or deployment change is made by this unit.
+
+## Integration Health metrics contract (U13.01)
+
+`buildHealthMetrics` defines current synthetic application/side counts, validated
+ALA action/visitor-override counts, existing CSE estimate totals, TSA source-status
+counts and owner-issued Playbook activity/milestone counts. Missing, invalid,
+outdated and incomplete values are explicit; no result means no financial number.
+Recorded visitor overrides do not prove that all suggestions have been reviewed.
+
+The read-only server composition uses existing module validators and source
+identities. It adds no inference, financial formula, persistence or public result
+import. CSE recalculation verifies an already supplied result; it does not generate
+an estimate before a visitor calculates one. Exact snapshots are current only while
+the authoritative reader still matches. No dashboard UI is wired in this unit:
+U13.02 owns tiles/deep links and U13.03 owns live-update UI acceptance.
+
+Run `npm run check:health-metrics` (also in CI). See the
+[metrics contract](docs/contracts/U13.01_Health_Metrics_Contract.md) and
+[validation](U13.01_VALIDATION.md). Live AI and protected public result delivery
+remain separately gated; the existing public TSA summary is unchanged.

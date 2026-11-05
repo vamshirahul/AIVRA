@@ -51,7 +51,7 @@ has a readiness-only Analyze action, License Optimizer shows the shared read-onl
 license inventory, TSA Tracker shows current linked synthetic services, and Cost
 Synergy and Scenario Modeling have readiness workspaces.
 Integration Health shows current TSA source counts; its other sections remain planned.
-The Assistant page remains an introduction; Playbook has an availability-only
+The Assistant has a question-preparation workspace with Ask unavailable; Playbook has an availability-only
 Generate action. Live AI remains disabled.
 
 | Group | Page | Route |
@@ -516,7 +516,7 @@ stay unchanged. No flat citations are fabricated and nothing is packed into user
 Larger contexts/history can fail without truncation. Original upstream schema exports
 remain compatible after data-only extraction to prevent circular dependencies.
 
-The public Assistant page stays an introduction: no chat UI, Ask button, endpoint,
+U10.02 introduced no public chat UI, Ask button, endpoint,
 fake answer, live providers, storage or deployment. U10.03 owns chat presentation;
 U10.04 and live/source-delivery/release gates remain separate. Run
 `npm run check:assistant-ask` (also in CI). See the
@@ -537,10 +537,34 @@ and [U00.07 validation](U00.07_VALIDATION.md) for remaining activation gates.
 
 ## Shared AI feedback (U00.08 — in review)
 
-License Optimizer and AI Assistant retain static “AI not enabled”;
-Application Rationalization and Playbook have readiness-only actions above. A reusable read-only
+License Optimizer retains static “AI not enabled”;
+Application Rationalization and Playbook have readiness-only actions above. The Assistant uses the U10.03 workspace below. A reusable read-only
 notice supports loading, validated paid/fallback provenance, safe errors and
 owner-supplied stale status for future modules. No live inference is enabled.
 Run `npm run check:ai-ui` for offline presentation checks. See the
 [UI state contract](docs/contracts/U00.08_AI_UI_State_Contract.md) and
 [U00.08 validation](U00.08_VALIDATION.md).
+
+## Assistant chat presentation (U10.03)
+
+`/ai-assistant` provides an accessible question composer, character feedback,
+conversation presentation and Reset chat using the existing Coastal Navy shell.
+**Public Ask is unavailable**: protected per-tab delivery is not connected and live
+AI remains disabled. Preparing or resetting a question sends no request and does
+not change transaction data. No successful answers or mock transcripts are installed
+in the public route.
+
+An additive server-only presenter can project current U10.02 owner-issued results
+into a strictly bounded, redacted display view. It retains opaque conversations and
+caller identity privately. This is an in-memory composition seam, not a browser
+transport, public endpoint or activation grant. The browser controller accepts only
+a current protected source, suppresses stale/pending results, and retains no chat
+in browser storage. Original AI findings and visitor reviews have distinct labels.
+
+Run `npm run check:assistant-chat` (included in `check:ci`). The isolated Chromium
+harness uses installed Chrome via `AIVRA_CHROMIUM_PATH` and
+`node scripts/check-assistant-chat-browser.mjs`; set `AIVRA_BASE_URL` to a running
+local production server to include truthful public-disabled checks. Fixtures remain
+in ignored `.temp/u10-03`, outside application routes and public assets.
+See the [chat UI contract](docs/contracts/U10.03_Assistant_Chat_UI_Contract.md) and
+[validation evidence](U10.03_VALIDATION.md). U10.04 and live activation remain deferred.

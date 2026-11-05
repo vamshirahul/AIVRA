@@ -219,6 +219,33 @@ main:focus-visible { outline: 3px solid var(--focus); outline-offset: -5px; }
 .playbook-review-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-block: 14px; }
 .playbook-review-error { color: var(--error); font-size: 12px; }
 .playbook-export { margin-block: 20px; padding: 14px; border: 1px solid var(--border); border-radius: 6px; background: var(--background); }
+.assistant-workspace { margin-top: 24px; padding: clamp(14px, 3vw, 28px); border: 1px solid var(--border); border-radius: 10px; background: var(--surface); overflow-wrap: anywhere; }
+.assistant-workspace h2 { font-size: clamp(20px, 3vw, 25px); font-weight: 650; margin-block: 16px 10px; }
+.assistant-workspace :is(h3,h4,h5) { font-weight: 650; margin-block: 10px; }
+.assistant-workspace p { margin-block: 10px; line-height: 1.7; }
+.assistant-intro { max-width: 76ch; }
+.assistant-availability, .assistant-status { border-inline-start: 3px solid var(--accent); padding: 12px 14px; background: var(--accent-soft); margin-block: 18px; }
+.assistant-status[role="alert"] { border-color: var(--warning); background: var(--warning-surface); }
+.assistant-conversation { margin-block: 24px; }
+.assistant-conversation-header, .assistant-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.assistant-conversation-header span, .assistant-provenance, .assistant-footnote, .assistant-count { color: var(--muted); font-size: 12px; }
+.assistant-empty { padding: 20px; border: 1px dashed var(--border); border-radius: 6px; }
+.assistant-transcript { display: grid; gap: 24px; list-style: none; padding: 0; }
+.assistant-transcript > li { min-width: 0; }
+.assistant-question, .assistant-answer { min-width: 0; padding: 16px; border: 1px solid var(--border); border-radius: 8px; }
+.assistant-question { margin-inline-start: min(24px, 4vw); background: var(--background); }
+.assistant-answer { margin-top: 10px; border-inline-start: 3px solid var(--accent); }
+.assistant-question p, .assistant-answer-text { white-space: pre-wrap; }
+.assistant-citations, .assistant-warning ul { padding-inline-start: 20px; list-style: disc; }
+.assistant-citations li { margin-block: 8px; font-size: 12px; }
+.assistant-warning { padding: 12px; background: var(--warning-surface); border-inline-start: 3px solid var(--warning); }
+.assistant-composer { padding-top: 20px; border-top: 1px solid var(--border); }
+.assistant-composer label { display: block; font-weight: 650; font-size: 16px; }
+.assistant-composer textarea { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; color: var(--foreground); background: var(--surface); font: inherit; line-height: 1.6; resize: vertical; }
+.assistant-composer textarea:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.assistant-actions { justify-content: flex-start; margin-block: 16px; }
+.assistant-actions .button { max-width: 100%; white-space: normal; }
+.assistant-validation { color: var(--error); font-size: 13px; }
 .tsa-health-summary { margin-top: 28px; padding: clamp(16px, 3vw, 26px); border: 1px solid var(--border); border-radius: 8px; background: var(--surface); overflow-wrap: anywhere; }
 .tsa-count-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 12px; margin-block: 18px; }
 .tsa-count-grid > div { border: 1px solid var(--border); border-radius: 6px; padding: 14px; }

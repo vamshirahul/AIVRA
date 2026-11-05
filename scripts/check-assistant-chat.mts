@@ -12,12 +12,15 @@ import { createAssistantChatSource } from "../lib/server/assistant/chat-presente
 import { createAssistantChatController, canAskChat } from "../lib/ai-assistant/chat-controller.ts";
 import { validChatView, validChatCitation, citationLabel, questionError } from "../lib/ai-assistant/chat-view.ts";
 import type { AssistantSources } from "../lib/server/assistant/context.ts";
+import type { EnabledPolicy } from "../lib/server/ai/control-policy.ts";
+import type { UsageStore } from "../lib/server/ai/usage-store.ts";
+import type { InvocationInput } from "../lib/server/ai/contracts.ts";
 import type { StructuredTransport } from "../lib/server/ai/base-contracts.ts";
 import type { AssistantChatSource, ChatAvailability, ChatView } from "../lib/ai-assistant/chat-view.ts";
 
 // Fake providers and delivery views only in this offline script and loopback harness.
-export async function chatFixture(rich = false, fallback = false) {
-  const base = licenseFixture(), p = { ...base.p, paid_enabled: !fallback };
+export async function chatFixture(rich = false, fallback = false, configure: { policy?: Partial<EnabledPolicy>; store?: (store: UsageStore) => UsageStore } = {}) {
+  const base = licenseFixture(), p = { ...base.p, paid_enabled: !fallback, ...configure.policy };
   let inputs: AssistantSources = { session: createDemoSession() };
   if (rich) {
     const playbook = await playbookFixture(true), original = playbook.read(), session = original.current_session;
@@ -26,21 +29,27 @@ export async function chatFixture(rich = false, fallback = false) {
     inputs = { session, ala: { outcome: original.outcome, captured_session: original.captured_session, review: original.review }, licenses: { outcome: license, captured_session: session },
       assumptions: { captured_session: session, draft: original.financial_draft, expected_review_digest: context.review_digest }, playbook: { source: playbook.source, review: playbook.draft } };
   }
+  const requests: InvocationInput[] = []; let outputTransform: ((output: unknown, input: InvocationInput) => unknown) | null = null;
+  let providerHook: (() => void | Promise<void>) | null = null;
   const listeners = new Set<() => void>(); let calls = 0, hold: Promise<void> | null = null, release: (() => void) | null = null, insufficient = false, failure = false;
   const send: StructuredTransport["generate"] = async call => {
-    calls++; if (hold) await hold; if (failure) throw Error("PRIVATE_PROVIDER_EXCEPTION");
+    calls++; requests.push(call.input); await providerHook?.(); if (hold) await hold; if (failure) throw Error("PRIVATE_PROVIDER_EXCEPTION");
     const c = call.input.context.assistant!.context, seen = new Set<string>();
     const citations = c.allowed_references.filter(r => { if (seen.has(r.kind)) return false; seen.add(r.kind); return true; });
     const target = c.allowed_references.find(r => r.kind === "application" && r.side === "target"); if (target) citations.push(target);
     for (const section of ["ala_review", "playbook_review"] as const) { const r = c.allowed_references.find(r => r.kind === "section" && r.section === section); if (r) citations.push(r); }
-    return { output: { contract_version: "assistant/answer/v1", status: insufficient ? "insufficient_evidence" : "answered",
+    const output = { contract_version: "assistant/answer/v1", status: insufficient ? "insufficient_evidence" : "answered",
       answer: insufficient ? "Offline test only: evidence is unavailable; do not infer a real answer." : 'Fabricated offline answer only. <script>window.__xss=1</script> [not a link](https://example.invalid)\nUnapproved illustration, never public analysis.',
-      citations: insufficient ? [] : citations, missing_context: c.missing_context, illustrative_unapproved: true, narrative_not_verified: true }, usage: { inputTokens: 10, outputTokens: 5 } };
+      citations: insufficient ? [] : citations, missing_context: c.missing_context, illustrative_unapproved: true, narrative_not_verified: true };
+    return { output: outputTransform ? outputTransform(output, call.input) : output, usage: { inputTokens: 10, outputTokens: 5 } };
   };
-  const owner = createAssistantAskOwner({ policy: p, execution: "offline-test", store: createFakeUsageStore(base.clock), clock: base.clock,
+  let elapsed = 0; const clock = () => base.clock() + elapsed;
+  const rawStore = createFakeUsageStore(clock), store = configure.store ? configure.store(rawStore) : rawStore;
+  const owner = createAssistantAskOwner({ policy: p, execution: "offline-test", store, clock,
     paid: { model_provider: p.paid.model_provider, model_id: p.paid.model_id, generate: send }, fallback: { model_provider: p.fallback.model_provider, model_id: p.fallback.model_id, generate: send } });
   const source = createAssistantChatSource(owner, () => inputs, { client_key: "a".repeat(64) }, n => { listeners.add(n); return () => { listeners.delete(n); }; });
-  return { source, owner, session: () => inputs.session as ReturnType<typeof createDemoSession>, calls: () => calls,
+  return { source, owner, p, store, requests, advance: () => { elapsed += Math.max(p.lease_ms, p.client_window_ms, p.global_window_ms) + 1; }, read: () => inputs, replace: (next: AssistantSources) => { inputs = next; listeners.forEach(n => n()); },
+    transform: (fn: typeof outputTransform) => { outputTransform = fn; }, providerHook: (fn: typeof providerHook) => { providerHook = fn; }, session: () => inputs.session as ReturnType<typeof createDemoSession>, calls: () => calls,
     change: () => { const s = inputs.session as ReturnType<typeof createDemoSession>; inputs = { ...inputs, session: updateTSA(s, s.current_deal.tsa_services[0].tsa_id, { status: "active" }) }; listeners.forEach(n => n()); },
     hold: () => { hold = new Promise<void>(r => { release = r; }); }, release: () => { hold = null; release?.(); },
     insufficient: () => { insufficient = true; }, fail: () => { failure = true; } };

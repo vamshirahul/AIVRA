@@ -568,3 +568,19 @@ local production server to include truthful public-disabled checks. Fixtures rem
 in ignored `.temp/u10-03`, outside application routes and public assets.
 See the [chat UI contract](docs/contracts/U10.03_Assistant_Chat_UI_Contract.md) and
 [validation evidence](U10.03_VALIDATION.md). U10.04 and live activation remain deferred.
+
+## Assistant mutation and failure acceptance (U10.04)
+
+`npm run check:assistant-acceptance` exercises the existing protected offline
+Assistant workflow against instruction attempts, source changes at three timings,
+unsafe outputs, current-history preservation, guarded failures, conversation limits
+and Reset. It reuses the U10.03 guarded fixtures and is included in `check:ci`.
+A group-name substring may be passed after `--` for a focused development check;
+the normal command and CI run every group.
+
+The existing Chromium harness additionally verifies that failures preserve an
+accepted transcript, prepared question and transaction state. Public Ask remains
+unavailable; no live model quality or protected public delivery acceptance is
+claimed. See the [acceptance contract](docs/contracts/U10.04_Assistant_Acceptance_Contract.md)
+and [validation matrix](U10.04_VALIDATION.md). No Assistant runtime, router,
+policy, session schema, dependency or deployment change is made by this unit.

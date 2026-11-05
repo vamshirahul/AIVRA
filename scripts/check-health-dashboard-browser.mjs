@@ -11,6 +11,8 @@ import ts from "typescript";
 
 assert.ok(process.env.AIVRA_CHROMIUM_PATH, "Set installed Chromium path");
 const output = ".temp/u13-02", fixture = JSON.parse(await readFile(`${output}/fixtures.json`, "utf8"));
+const updates = process.env.AIVRA_HEALTH_UPDATES ? JSON.parse(await readFile('.temp/u13-03/updates.json','utf8')) : null;
+const updatesOnly = process.env.AIVRA_HEALTH_UPDATES_ONLY === '1';
 // Same small local React/TS bundler and CDP pattern as existing module harnesses.
 const root = process.cwd(), modules = [], ids = new Map();
 function bundleModule(file, source) {
@@ -28,11 +30,15 @@ import {DemoSessionProvider,useDemoSession} from '../../components/demo-session-
 import {HealthDashboard} from '../../components/integration-health/dashboard.tsx';
 import {SESSION_STORAGE_KEY} from '../../lib/session/session.ts';
 const freeze=v=>{if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;};
-const fixture=freeze(${JSON.stringify(fixture)});sessionStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(fixture.session));
-let current=fixture.populated,revoked=false;const known=new WeakSet(Object.values(fixture).filter(v=>v?.contract_version)),listeners=new Set();
+const fixture=freeze(${JSON.stringify(fixture)}),updates=freeze(${JSON.stringify(updates)}),updateMode=new URL(location.href).searchParams.has("updates");
+const seededSession=updateMode?updates.session:fixture.session;sessionStorage.setItem(SESSION_STORAGE_KEY,JSON.stringify(seededSession));
+let current=updateMode?updates.steps[0].snapshot:fixture.populated,revoked=false;const revokedSnapshots=new WeakSet(),known=new WeakSet([...Object.values(fixture).filter(v=>v?.contract_version),...(updates?.steps.map(s=>s.snapshot)??[]),...(updates?[updates.recovery]:[])]),listeners=new Set();
 const api=window.offlineHealth={fetches:0};
-const source={getSnapshot:()=>current,subscribe:n=>{listeners.add(n);return()=>listeners.delete(n);},isCurrent:v=>!revoked&&v===current&&known.has(v),matchesSession:s=>JSON.stringify(s)===JSON.stringify(fixture.session)};
-api.mode=name=>{current=fixture[name];revoked=false;listeners.forEach(n=>n());};api.revoke=()=>{revoked=true;listeners.forEach(n=>n());};
+const source={getSnapshot:()=>current,subscribe:n=>{listeners.add(n);return()=>listeners.delete(n);},isCurrent:v=>!revoked&&!revokedSnapshots.has(v)&&v===current&&known.has(v),matchesSession:s=>JSON.stringify(s)===JSON.stringify(seededSession)};
+api.mode=name=>{current=fixture[name];revoked=false;listeners.forEach(n=>n());};api.revoke=()=>{revoked=true;revokedSnapshots.add(current);listeners.forEach(n=>n());};
+api.deliver=name=>{const next=updates.steps.find(s=>s.name===name).snapshot;if(current&&current!==next)revokedSnapshots.add(current);current=next;revoked=false;listeners.forEach(n=>n());};
+api.unavailable=()=>{current=null;listeners.forEach(n=>n());};
+api.recover=()=>{current=updates.recovery;revoked=false;listeners.forEach(n=>n());};
 api.invalid=()=>{current={...fixture.populated,private_context:'PRIVATE_DETAIL_MUST_NOT_RENDER'};known.add(current);listeners.forEach(n=>n());};
 api.foreign=()=>{current=structuredClone(fixture.populated);listeners.forEach(n=>n());};
 window.fetch=()=>{api.fetches++;throw Error('Offline dashboard must not fetch');};
@@ -45,12 +51,12 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 const server = createServer((req, res) => { const url = new URL(req.url, "http://127.0.0.1"); if (url.pathname === "/bundle.js") { res.setHeader("content-type", "text/javascript"); res.end(bundle); } else if (url.pathname === "/") { res.setHeader("content-type", "text/html"); res.end(html); } else { res.statusCode = 404; res.end(); } });
 await new Promise(resolve => server.listen(0, "127.0.0.1", resolve)); const offlineURL = `http://127.0.0.1:${server.address().port}/`;
 const profile = await mkdtemp(path.join(tmpdir(), "aivra-health-dashboard-")), browser = spawn(process.env.AIVRA_CHROMIUM_PATH, ["--headless", "--no-first-run", "--no-default-browser-check", "--disable-background-networking", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { windowsHide: true });
-const evidence = { checks: [], runtimeErrors: [], externalRequests: [], screenshots: [], limitations: "Isolated fabricated result displays only; public protected-result delivery remains unavailable. Keyboard/AX/DOM checks are not full WCAG/screen-reader or physical-device UAT." };
+const evidence = { checks: [], runtimeErrors: [], externalRequests: [], apiRequests: [], screenshots: [], limitations: "Isolated fabricated result displays only; public protected-result delivery remains unavailable. Keyboard/AX/DOM checks are not full WCAG/screen-reader or physical-device UAT." };
 let socket, serial = 0; const pending = new Map();
 try {
   const endpoint = await new Promise((resolve, reject) => { let stderr = ""; const timer = setTimeout(() => reject(Error("Chrome timeout")), 15000); browser.once("error", reject); browser.stderr.on("data", b => { stderr += b; const m = stderr.match(/DevTools listening on (ws:\/\/[^\s]+)/); if (m) { clearTimeout(timer); resolve(m[1]); } }); });
   socket = new WebSocket(endpoint); await new Promise((resolve, reject) => { socket.addEventListener("open", resolve, { once: true }); socket.addEventListener("error", reject, { once: true }); });
-  socket.addEventListener("message", ({ data }) => { const m = JSON.parse(data); if (m.method === "Runtime.exceptionThrown") evidence.runtimeErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text); if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") evidence.runtimeErrors.push(m.params.args.map(a => a.description ?? a.value).join(" ")); if (m.method === "Network.requestWillBeSent" && /^https?:/.test(m.params.request.url) && !/^http:\/\/(127\.0\.0\.1|localhost):/.test(m.params.request.url)) evidence.externalRequests.push(m.params.request.url); if (!m.id) return; const wait = pending.get(m.id); if (!wait) return; pending.delete(m.id); clearTimeout(wait.timer); m.error ? wait.reject(Error(JSON.stringify(m.error))) : wait.resolve(m.result); });
+  socket.addEventListener("message", ({ data }) => { const m = JSON.parse(data); if (m.method === "Runtime.exceptionThrown") evidence.runtimeErrors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text); if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") evidence.runtimeErrors.push(m.params.args.map(a => a.description ?? a.value).join(" ")); if(m.method === "Network.requestWillBeSent" && /^https?:/.test(m.params.request.url) && new URL(m.params.request.url).pathname.startsWith("/api/")) evidence.apiRequests.push(m.params.request.url); if (m.method === "Network.requestWillBeSent" && /^https?:/.test(m.params.request.url) && !/^http:\/\/(127\.0\.0\.1|localhost):/.test(m.params.request.url)) evidence.externalRequests.push(m.params.request.url); if (!m.id) return; const wait = pending.get(m.id); if (!wait) return; pending.delete(m.id); clearTimeout(wait.timer); m.error ? wait.reject(Error(JSON.stringify(m.error))) : wait.resolve(m.result); });
   function send(method, params = {}, sessionId) { return new Promise((resolve, reject) => { const id = ++serial, timer = setTimeout(() => { pending.delete(id); reject(Error(method)); }, 15000); pending.set(id, { resolve, reject, timer }); socket.send(JSON.stringify({ id, method, params, ...(sessionId ? { sessionId } : {}) })); }); }
   const { targetId } = await send("Target.createTarget", { url: "about:blank" }), { sessionId } = await send("Target.attachToTarget", { targetId, flatten: true }); const page = (m, p) => send(m, p, sessionId);
   async function evaluate(expression) { const r = await page("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true }); if (r.exceptionDetails) throw Error(JSON.stringify(r.exceptionDetails)); return r.result.value; }
@@ -62,6 +68,7 @@ try {
   async function shot(name) { const {data}=await page('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});await writeFile(`${output}/${name}.png`,Buffer.from(data,'base64'));evidence.screenshots.push(`${name}.png`); }
   await page('Page.enable');await page('Runtime.enable');await page('Network.enable');
   await page('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+  if (!updatesOnly) {
   await page('Page.navigate',{url:offlineURL});await waitFor("document.querySelector('[data-metric=\"Original AI actions\"]')?.textContent!=='Not available' && !!window.offlineHealth?.session?.ready");
   const stored=await evaluate('sessionStorage.getItem("aivra:r0:demo-session:v1")');
   assert.equal(await metric('Total applications'),String(fixture.session.current_deal.applications.length));
@@ -82,6 +89,31 @@ try {
   evidence.checks.push('Actual incomplete/null CSE warnings, outdated/absent values, invalid private DTO and foreign/stale view refusal; source session unchanged and zero dashboard requests.');
   await mode('populated');await evaluate('window.offlineHealth.session.resetDemoSession()');await waitFor("document.querySelector('[aria-label=\"Cost Synergy\"] [data-state=outdated]')");assert.equal(await metric('Illustrative net benefit'),'Not available');
   evidence.checks.push('Shared-session Reset cannot display the previous protected result as current; no full mutation walkthrough/U13.03 claim.');
+  }
+
+  if(updates){
+    await page('Page.navigate',{url:offlineURL+'?updates=1'});await waitFor("!!window.offlineHealth?.session?.ready && document.querySelector('[data-metric=\"Original AI actions\"]')?.textContent==='30'");
+    const original=await evaluate('sessionStorage.getItem("aivra:r0:demo-session:v1")');
+    assert.ok(await evaluate("document.querySelector('.health-availability[role=status]')?.textContent.trim().length>0"));
+    for(const step of updates.steps){await evaluate(`window.offlineHealth.deliver(${JSON.stringify(step.name)})`);await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
+      for(const [label,key] of [['Original AI actions','actions'],['Recorded visitor overrides','overrides'],['Illustrative net benefit','net'],['Original activities','activities'],['Recorded visitor edits','edits']])assert.equal(await metric(label),String(step.expected[key]),step.name+' '+label);
+      assert.equal(await evaluate("document.querySelectorAll('.tsa-health-summary').length"),1);assert.equal(await evaluate("document.querySelectorAll('[data-tsa-count]').length"),5);
+    }
+    assert.equal(await evaluate('sessionStorage.getItem("aivra:r0:demo-session:v1")'),original);
+    await evaluate('window.offlineHealth.deliver("initial")');await waitFor("document.querySelector('[aria-label=\"Application Rationalization\"] [data-state=outdated]')");assert.equal(await metric('Original AI actions'),'Not available');
+    await evaluate('window.offlineHealth.unavailable()');await waitFor("document.querySelector('[aria-label=\"Cost Synergy\"] [data-state=unavailable]')");await evaluate('window.offlineHealth.invalid()');await waitFor("document.querySelector('[aria-label=\"Cost Synergy\"] [data-state=invalid]')");
+    await evaluate('window.offlineHealth.recover()');await waitFor("document.querySelector('[data-metric=\"Original AI actions\"]')?.textContent==='30'");assert.equal(await metric('Annual recurring savings'),'CAD 0.00');
+    evidence.checks.push('U13.03 isolated owner-backed sequence: saved Playbook review/regeneration, U11.02 scenario/CSE amounts/horizon, dirty/incomplete/null estimates, newly issued guarded ALA and visitor review, missing/invalid data; old capture replay refused and session unchanged by delivery.');
+    await page('Page.navigate',{url:offlineURL+'?updates=1'});await waitFor("!!window.offlineHealth?.session?.ready && document.querySelector('[data-metric=\"Total applications\"]')?.textContent==='30'");
+    await evaluate(`(()=>{const c=window.offlineHealth.session,s=c.getSnapshot().session,rows=s.current_deal.applications.filter(a=>a.company_side==='buyer');const r=c.publishApplications('buyer',[...rows,{...rows[0],app_id:'app_browser_dashboard_added',app_name:'Isolated browser addition'}],{session_id:s.session_id,session_revision:s.session_revision});if(!r.ok)throw Error('Publication rejected');})()`);
+    await waitFor("document.querySelector('[data-metric=\"Total applications\"]')?.textContent==='31'");assert.equal(await metric('Buyer applications'),'16');assert.equal(await metric('Target applications'),'15');assert.equal(await metric('Original AI actions'),'Not available');
+    await evaluate(`(()=>{const c=window.offlineHealth.session,s=c.getSnapshot().session;c.updateApplication(s.current_deal.applications[0].app_id,{app_name:'Updated local application'});const n=c.getSnapshot().session;const r=c.publishApplications('buyer',n.current_deal.applications.filter(a=>a.company_side==='buyer'&&a.app_id!=='app_browser_dashboard_added'),{session_id:n.session_id,session_revision:n.session_revision});if(!r.ok)throw Error('Remove publication rejected');})()`);
+    await waitFor("document.querySelector('[data-metric=\"Total applications\"]')?.textContent==='30'");
+    for(const status of ['active','at_risk','completed','planned']){await evaluate(`(()=>{const c=window.offlineHealth.session,s=c.getSnapshot().session;c.updateTSA(s.current_deal.tsa_services[0].tsa_id,{status:${JSON.stringify(status)}});})()`);await evaluate('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');const counts=await evaluate("[...document.querySelectorAll('[data-tsa-count]')].map(n=>Number(n.textContent))");assert.deepEqual(counts,status==='planned'?[5,5,0,0,0]:[5,4,+(status==='active'),+(status==='at_risk'),+(status==='completed')]);}
+    await evaluate(`(()=>{const c=window.offlineHealth.session,id=c.getSnapshot().session.current_deal.tsa_services[0].tsa_id;for(const status of ['active','at_risk','completed'])c.updateTSA(id,{status});})()`);await waitFor("document.querySelector('[data-tsa-count=completed]').textContent==='1'");assert.equal(await metric('Original AI actions'),'Not available');
+    await evaluate('window.offlineHealth.session.resetDemoSession()');await waitFor("document.querySelector('[data-tsa-count=planned]').textContent==='5'");assert.equal(await metric('Illustrative net benefit'),'Not available');assert.equal(await metric('Total applications'),'30');assert.equal(await evaluate('window.offlineHealth.fetches'),0);
+    evidence.checks.push('U13.03 actual mounted session operations without reload: publish Add/update/remove Buyer inventory, exact side counts, all four TSA states and rapid sequential updates, one count set, source invalidation and Reset; zero dashboard fetches.');
+  }
   if(process.env.AIVRA_BASE_URL){const base=process.env.AIVRA_BASE_URL;assert.equal(new URL(base).hostname,'127.0.0.1');
     await page('Page.addScriptToEvaluateOnNewDocument',{source:"window.__healthCalls=[];const f=window.fetch;window.fetch=(...a)=>{window.__healthCalls.push({url:String(a[0] instanceof Request?a[0].url:a[0]),method:a[1]?.method??(a[0] instanceof Request?a[0].method:'GET')});return f(...a)};"});
     for(const width of [1440,390,320]){await page('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:false});await page('Page.navigate',{url:base+'/integration-health'});await waitFor("document.querySelector('[data-metric=\"Total applications\"]')?.textContent==='30'");
@@ -90,10 +122,23 @@ try {
       await shot(`public-${width}`);for(const request of await evaluate('window.__healthCalls')){const url=new URL(request.url);assert.equal(request.method,'GET');assert.equal(url.origin,base);assert.ok(url.searchParams.has('_rsc'));assert.ok(['/','/integration-health','/data-mapper','/application-rationalization','/license-optimizer','/cost-synergy','/scenario-modeling','/playbook-generator','/tsa-tracker','/ai-assistant'].includes(url.pathname));}
       await key('Enter',13);await waitFor("location.pathname==='/application-rationalization'");assert.equal(await evaluate('sessionStorage.getItem("aivra:r0:demo-session:v1")'),before);
     }
+
+    if(updates){
+      await page('Page.navigate',{url:base+'/tsa-tracker'});await waitFor("document.querySelectorAll('.tsa-inventory tbody tr').length===5");
+      const savedSession=await evaluate('sessionStorage.getItem("aivra:r0:demo-session:v1")');
+      await evaluate(`(()=>{const select=document.querySelector('.tsa-toolbar select[id$="-filter"]');select.value='active';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);await waitFor("document.body.textContent.includes('No TSA services match this status filter')");
+      await evaluate("document.querySelector('nav a[href=\"/integration-health\"]').click()");await waitFor("!!document.querySelector('[data-tsa-count=total]')");assert.deepEqual(await evaluate("[...document.querySelectorAll('[data-tsa-count]')].map(n=>Number(n.textContent))"),[5,5,0,0,0]);assert.equal(await evaluate('sessionStorage.getItem("aivra:r0:demo-session:v1")'),savedSession);
+      await evaluate("document.querySelector('.tsa-health-summary a').click()");await waitFor("document.querySelectorAll('.tsa-inventory tbody tr').length===5");
+      await evaluate("document.querySelector('.tsa-inventory button').focus()");await key('Enter',13);await waitFor("!!document.querySelector('.tsa-edit-panel')");
+      await evaluate(`(()=>{const select=document.querySelector('.tsa-edit-panel [name="status"]');select.value='active';select.dispatchEvent(new Event('change',{bubbles:true}));})()`);await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Save').focus()");await key('Enter',13);await waitFor("!document.querySelector('.tsa-edit-panel')");
+      await evaluate("document.querySelector('nav a[href=\"/integration-health\"]').click()");await waitFor("document.querySelector('[data-tsa-count=active]')?.textContent==='1'");assert.deepEqual(await evaluate("[...document.querySelectorAll('[data-tsa-count]')].map(n=>Number(n.textContent))"),[5,4,1,0,0]);
+      await evaluate("[...document.querySelectorAll('button')].find(b=>b.textContent==='Reset demo session').focus()");await key('Enter',13);await waitFor("document.activeElement.textContent==='Confirm reset'");await key('Enter',13);await waitFor("document.querySelector('[data-tsa-count=planned]')?.textContent==='5'");assert.equal(await metric('Total applications'),'30');assert.equal(await metric('Illustrative net benefit'),'Not available');assert.equal(await evaluate("document.querySelectorAll('[data-tsa-count]').length"),5);
+      evidence.checks.push('U13.03 final public app: TSA filter/navigation does not alter portfolio counts or saved data; keyboard Edit/Save status updates counts on return, keyboard Reset restores current inventory without protected fake data.');
+    }
     const destinations={'/data-mapper':'Data Mapper Engine','/application-rationalization':'Application Rationalization','/license-optimizer':'License Optimizer','/cost-synergy':'Cost Synergy Estimator','/scenario-modeling':'Scenario / What-if Modeling','/playbook-generator':'Playbook Generator','/tsa-tracker':'TSA Tracker'};
     for(const [path,title] of Object.entries(destinations)){await page('Page.navigate',{url:base+path});await waitFor(`location.pathname===${JSON.stringify(path)} && document.querySelector('h1')?.textContent===${JSON.stringify(title)}`);}
 
     evidence.checks.push('Final production1440/390/320: real application/TSA counts once, protected ALA/CSE/Playbook unavailable, keyboard Tab/Enter overview navigation with focus and preserved session, seven inert features, no overflow or API/provider calls; destination routes load.');
   }
-  assert.deepEqual(evidence.runtimeErrors,[]);assert.deepEqual(evidence.externalRequests,[]);await writeFile(`${output}/browser-checks.json`,JSON.stringify(evidence,null,2));console.log(`PASS: ${evidence.checks.length} U13.02 Chromium groups; actual isolated components and optional final production dashboard.`);
+  assert.deepEqual(evidence.runtimeErrors,[]);assert.deepEqual(evidence.externalRequests,[]);assert.deepEqual(evidence.apiRequests,[]);await writeFile(`${output}/browser-checks.json`,JSON.stringify(evidence,null,2));console.log(`PASS: ${evidence.checks.length} U13.02 Chromium groups; actual isolated components and optional final production dashboard.`);
 }finally{socket?.close();browser.kill();await new Promise(resolve=>server.close(resolve));}

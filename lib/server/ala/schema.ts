@@ -2,8 +2,8 @@ import "server-only";
 import { z } from "zod";
 import { ApplicationSchema } from "../../contracts/demo.ts";
 import type { Application } from "../../contracts/demo.ts";
-import { MAX_OUTPUT_BYTES, SourceIdSchema } from "../ai/contracts.ts";
-import type { OutputContract } from "../ai/contracts.ts";
+import { MAX_OUTPUT_BYTES, SourceIdSchema } from "../ai/base-contracts.ts";
+import type { OutputContract } from "../ai/base-contracts.ts";
 
 const text = (max: number) => z.string().min(1).max(max).refine((value) => value.trim().length > 0, "Nonblank text required");
 const identity = z.string().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/);

@@ -498,6 +498,31 @@ Run `npm run check:assistant-context` (also in `check:ci`). See the
 [validation](U10.01_VALIDATION.md) for exact G2 scope, authority boundaries,
 offline evidence, remaining live gates and rollback.
 
+## Guarded Assistant Ask foundation (U10.02 — in review)
+
+The internal server-only Assistant owner supports explicit Ask using a current
+U10.01 context and an opaque conversation handle. Questions and prior responses
+remain untrusted JSON data. Structured answers require supported typed citations
+or explicit insufficient evidence, full missing-context labels and unapproved/
+synthetic disclosures, with actual guarded-adapter model/routing provenance.
+History is in memory only: four exchanges and 32,000 UTF-8 bytes, bound to the exact
+session/context. Source/Reset/review/assumption/Playbook changes revoke it. Invalid,
+stale or oversized responses are withheld; ordinary failures retain current history.
+
+Typed `context.assistant` passes through the existing guarded router and independent
+budget/rate/concurrency protections. Complete request/history/output-schema bytes
+must fit the existing 128,000-byte cap; model output64KB and token authorization2,048
+stay unchanged. No flat citations are fabricated and nothing is packed into user_text.
+Larger contexts/history can fail without truncation. Original upstream schema exports
+remain compatible after data-only extraction to prevent circular dependencies.
+
+The public Assistant page stays an introduction: no chat UI, Ask button, endpoint,
+fake answer, live providers, storage or deployment. U10.03 owns chat presentation;
+U10.04 and live/source-delivery/release gates remain separate. Run
+`npm run check:assistant-ask` (also in CI). See the
+[Ask contract](docs/contracts/U10.02_Assistant_Ask_Contract.md) and
+[validation](U10.02_VALIDATION.md).
+
 ## AI budget and fallback foundation (U00.07 — in review)
 
 The internal router now supports independently capped paid/fallback paths,

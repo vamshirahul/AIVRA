@@ -9,12 +9,10 @@ import type { InvocationInput } from "../ai/contracts.ts";
 import { LICENSE_PROMPT_VERSION, LICENSE_SYSTEM_PROMPT } from "./prompt.ts";
 import { LicenseResultSchema } from "./schema.ts";
 
-export const LicenseSourceTokenSchema = z.strictObject({
-  session_id: z.uuid(), fixture_id: SourceIdSchema, fixture_dataset_version: z.string().regex(/^\d+\.\d+\.\d+$/),
-  application_revision: z.number().int().nonnegative(), license_revision: z.number().int().nonnegative(),
-  source_digest: z.string().regex(/^[a-f0-9]{64}$/),
-});
-export type LicenseSourceToken = Readonly<z.infer<typeof LicenseSourceTokenSchema>>;
+import { LicenseSourceTokenSchema } from "./source-schema.ts";
+import type { LicenseSourceToken } from "./source-schema.ts";
+export { LicenseSourceTokenSchema } from "./source-schema.ts";
+export type { LicenseSourceToken } from "./source-schema.ts";
 function validatedSession(input: unknown): DemoSession | null {
   try {
     const json = JSON.stringify(input);

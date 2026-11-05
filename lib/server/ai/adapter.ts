@@ -2,6 +2,8 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
+import { AssistantAnswerSchema, inspectAssistantAnswer } from "../assistant/ask-schema.ts";
+import { AssistantReferencesSchema } from "../assistant/schema.ts";
 import { failure, InvocationSchema, MAX_INPUT_BYTES, MAX_OUTPUT_BYTES, ModelIdentitySchema, ReferencePolicySchema, resultEnvelopeSchema, SourceIdSchema, TransportFailure, UsageEstimateSchema } from "./contracts.ts";
 import type { AdapterResult, FailureCode, InvocationInput, OutputContract, StructuredTransport } from "./contracts.ts";
 
@@ -13,11 +15,12 @@ export function validateInvocation<T>(request: InvocationInput, contract: Output
     if (Buffer.byteLength(serialized, "utf8") > MAX_INPUT_BYTES) return { ok: false, code: "request_too_large" as FailureCode } as const;
     const parsed = InvocationSchema.safeParse(request);
     if (!parsed.success) return { ok: false, code: (parsed.error.issues.some((issue) => issue.code === "too_big") ? "request_too_large" : "invalid_input") as FailureCode } as const;
-    if (request.module === "playbook" && !isDeepStrictEqual(parsed.data, request)) return { ok: false, code: "invalid_input" as FailureCode } as const;
+    if ((request.module === "playbook" || !!request.context?.assistant) && !isDeepStrictEqual(parsed.data, request)) return { ok: false, code: "invalid_input" as FailureCode } as const;
     if (!(contract?.schema instanceof z.ZodType) || typeof contract.references?.extract !== "function") return { ok: false, code: "invalid_input" as FailureCode } as const;
     const policy = ReferencePolicySchema.safeParse({ allow_empty: contract.references.allow_empty, duplicates: contract.references.duplicates });
     if (!policy.success) return { ok: false, code: "invalid_input" as FailureCode } as const;
-    if (request.module === "playbook" && Buffer.byteLength(JSON.stringify({ input: parsed.data, schema: z.toJSONSchema(contract.schema) }), "utf8") > MAX_INPUT_BYTES) return { ok: false, code: "request_too_large" as FailureCode } as const;
+    if ((request.module === "playbook" || !!request.context?.assistant) && Buffer.byteLength(JSON.stringify({ input: parsed.data, schema: z.toJSONSchema(contract.schema) }), "utf8") > MAX_INPUT_BYTES) return { ok: false, code: "request_too_large" as FailureCode } as const;
+    if (parsed.data.context.assistant && (!Object.is(contract.schema, AssistantAnswerSchema) || policy.data.allow_empty !== true || policy.data.duplicates !== "reject")) return { ok:false,code:"invalid_input" as FailureCode } as const;
     return { ok: true, input: parsed.data, references: policy.data } as const;
   } catch { return { ok: false, code: "invalid_input" as FailureCode } as const; }
 }
@@ -58,10 +61,15 @@ export function createAIAdapter(transport: StructuredTransport, options: { timeo
       const output = contract.schema.safeParse(generated.output);
       // Reject stripping, coercion, defaults or transformation of generated data.
       if (!output.success || !isDeepStrictEqual(output.data, generated.output)) return failure("invalid_model_output", requestId);
+      if (input.context.assistant) {
+        const answer = AssistantAnswerSchema.safeParse(output.data), extracted = AssistantReferencesSchema.safeParse(contract.references.extract(output.data));
+        if (!answer.success || !extracted.success || !isDeepStrictEqual(extracted.data, answer.data.citations) || !inspectAssistantAnswer(answer.data, input.context.assistant.context)) return failure("invalid_model_output", requestId);
+      } else {
       const references = z.array(SourceIdSchema).max(400).safeParse(contract.references.extract(output.data));
       if (!references.success || (!parsed.references.allow_empty && references.data.length === 0) ||
         (parsed.references.duplicates === "reject" && new Set(references.data).size !== references.data.length) ||
         references.data.some((id) => !input.allowed_source_ids.includes(id))) return failure("invalid_model_output", requestId);
+      }
       const usage = UsageEstimateSchema.safeParse({
         input_tokens: generated.usage?.inputTokens ?? null,
         output_tokens: generated.usage?.outputTokens ?? null,

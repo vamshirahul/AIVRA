@@ -9,16 +9,11 @@ import { LICENSE_PROMPT_VERSION } from "./prompt.ts";
 import { buildLicenseRequest, LicenseSourceTokenSchema, matchesLicenseSource } from "./request.ts";
 import { LICENSE_OUTPUT_CONTRACT, LicenseCoverageSchema, LicenseResultSchema, inspectLicenseResult } from "./schema.ts";
 
-const ErrorOutcome = z.strictObject({ status: z.literal("error"), error: z.strictObject({ code: FailureCodeSchema, request_id: z.uuid().nullable(), message: z.string().min(1).max(160) }) });
-export const LicenseAnalyzeOutcomeSchema = z.union([ErrorOutcome, z.strictObject({
-  status: z.enum(["success", "incomplete"]), envelope: resultEnvelopeSchema(LicenseResultSchema),
-  coverage: LicenseCoverageSchema, source_token: LicenseSourceTokenSchema,
-})]).superRefine((value, ctx) => {
-  if (value.status !== "error" && ((value.status === "success") !== (value.coverage.status === "complete") ||
-      value.envelope.module !== "licenses" || value.envelope.prompt_version !== LICENSE_PROMPT_VERSION)) ctx.addIssue({ code: "custom", message: "License outcome identity/coverage mismatch" });
-});
-export type LicenseAnalyzeOutcome = z.infer<typeof LicenseAnalyzeOutcomeSchema>;
-function safeError(code: FailureCode, requestId: string | null = null): z.infer<typeof ErrorOutcome> {
+import { LicenseAnalyzeOutcomeSchema } from "./outcome-schema.ts";
+import type { LicenseAnalyzeOutcome } from "./outcome-schema.ts";
+export { LicenseAnalyzeOutcomeSchema } from "./outcome-schema.ts";
+export type { LicenseAnalyzeOutcome } from "./outcome-schema.ts";
+function safeError(code: FailureCode, requestId: string | null = null): Extract<LicenseAnalyzeOutcome, { status: "error" }> {
   const safe = failure(code, requestId ?? "00000000-0000-4000-8000-000000000000");
   return { status: "error", error: { ...safe.error, request_id: requestId } };
 }

@@ -9,11 +9,10 @@ import type { InvocationInput } from "../ai/contracts.ts";
 import { ALA_PROMPT_VERSION, ALA_SYSTEM_PROMPT } from "./prompt.ts";
 import { ALAResultSchema } from "./schema.ts";
 
-export const ALASourceTokenSchema = z.strictObject({
-  session_id: z.uuid(), application_revision: z.number().int().nonnegative(),
-  fixture_id: z.string().min(1), fixture_dataset_version: z.string().min(1), applications_digest: z.string().regex(/^[a-f0-9]{64}$/),
-});
-export type ALASourceToken = Readonly<z.infer<typeof ALASourceTokenSchema>>;
+import { ALASourceTokenSchema } from "./source-schema.ts";
+import type { ALASourceToken } from "./source-schema.ts";
+export { ALASourceTokenSchema } from "./source-schema.ts";
+export type { ALASourceToken } from "./source-schema.ts";
 function validatedSession(input: unknown): DemoSession | null {
   try {
     const serialized = JSON.stringify(input);

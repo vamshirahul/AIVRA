@@ -6,10 +6,10 @@ import { ReviewedALAExportSchema } from "../../ala/review-export.ts";
 import { CSERequestSchema } from "../../cost-synergy/calculation-contract.ts";
 import { ScenarioFinancialDraftSchema } from "../../scenario-modeling/scenario-draft.ts";
 import { PlaybookReviewDraftSchema } from "../../playbook-generator/review-draft.ts";
-import { ALAAnalyzeOutcomeSchema } from "../ala/analyze.ts";
-import { LicenseAnalyzeOutcomeSchema } from "../licenses/analyze.ts";
-import { PlaybookOutcomeSchema } from "../playbook/generate.ts";
-import { SourceIdSchema } from "../ai/contracts.ts";
+import { ALAAnalyzeOutcomeSchema } from "../ala/outcome-schema.ts";
+import { LicenseAnalyzeOutcomeSchema } from "../licenses/outcome-schema.ts";
+import { PlaybookOutcomeSchema } from "../playbook/outcome-schema.ts";
+import { SourceIdSchema } from "../ai/base-contracts.ts";
 
 export const ASSISTANT_CONTEXT_VERSION = "assistant/context/v1" as const;
 const LocalId = z.string().min(1).max(64).regex(/^[a-zA-Z0-9_-]+$/);

@@ -1,13 +1,29 @@
+import { mkdtemp, writeFile, unlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { readLocalPolicy } from "../lib/server/local-ala/config.ts";
+import { createLocalLedger } from "../lib/server/local-ala/ledger.ts";
+import { issueLocalAuthority, localProcessEnabled } from "../lib/server/ai/local-authority.ts";
+import { createLocalProviders } from "../lib/server/local-ala/providers.ts";
+import { localALAPost, isLocalRequest } from "../lib/server/local-ala/http.ts";
+import { projectALAResults } from "../lib/server/ala/presentation.ts";
+import { buildReviewedExport } from "../lib/ala/review-export.ts";
+import { createReviewDraft } from "../lib/ala/review-overrides.ts";
+import { readLocalALADisplay } from "../lib/ala/local-display.ts";
+import { reservationUnits } from "../lib/server/ai/control-policy.ts";
+import { createAIRouter } from "../lib/server/ai/router.ts";
+import { randomUUID } from "node:crypto";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { POST, runtime } from "../app/api/ai/ala/route.ts";
 import { createALAAnalyzer, ALAActionErrorSchema, ALAAnalyzeOutcomeSchema } from "../lib/server/ala/analyze.ts";
-import { matchesALASource } from "../lib/server/ala/request.ts";
+import { matchesALASource, buildALARequest } from "../lib/server/ala/request.ts";
 import { createFakeUsageStore } from "../lib/server/ai/fake-usage-store.ts";
 import { EnabledPolicySchema } from "../lib/server/ai/control-policy.ts";
 import type { EnabledPolicy } from "../lib/server/ai/control-policy.ts";
 import type { StructuredTransport } from "../lib/server/ai/contracts.ts";
 import { createDemoSession, updateApplication, updateLicense, publishSessionApplications } from "../lib/session/session.ts";
+import { ALAResultSchema } from "../lib/server/ala/schema.ts";
 import type { ALAResult } from "../lib/server/ala/schema.ts";
 
 const session = createDemoSession();
@@ -116,6 +132,72 @@ if (!process.argv.includes("--ala-browser")) {
       const timeout = fixture(data(), policy({ timeout_ms: 5 }), async () => new Promise(() => {})); const timed = await timeout.analyze(session, caller);
       assert.ok(timed.status === "error" && timed.error.code === "provider_unavailable"); assert.deepEqual(timeout.calls(), { paid: 1, fallback: 0 });
     });
+    await check("local-only origin/config guards and disabled dummy fallback cannot grant public execution", async () => {
+      const names=["NODE_ENV","AIVRA_AI_ENABLED","AIVRA_LOCAL_DEMO_ONLY","AIVRA_LOCAL_ALA_LAUNCHER","VERCEL","CI","AIVRA_LOCAL_ALA_PORT","AIVRA_LOCAL_PAID_ENABLED","AIVRA_LOCAL_FALLBACK_ENABLED"] as const;
+      const prior=Object.fromEntries(names.map(n=>[n,process.env[n]]));
+      try {
+        const localEnv={AIVRA_LOCAL_PAID_ENABLED:"false",AIVRA_LOCAL_FALLBACK_ENABLED:"false",AIVRA_LOCAL_ALA_PORT:"3000",NODE_ENV:"development",AIVRA_AI_ENABLED:"true",AIVRA_LOCAL_DEMO_ONLY:"true",AIVRA_LOCAL_ALA_LAUNCHER:"a".repeat(64)};
+        Object.assign(process.env,localEnv);delete process.env.VERCEL;delete process.env.CI;
+        const headers={host:"127.0.0.1:3000",origin:"http://127.0.0.1:3000","x-aivra-local-demo":"1"};
+        const request=(h:Record<string,string>=headers,url="http://127.0.0.1:3000/api/local-ala")=>new Request(url,{method:"POST",headers:h});
+        assert.ok(isLocalRequest(request()));assert.ok(isLocalRequest(request({...headers,host:"localhost:3000",origin:"http://localhost:3000"},"http://localhost:3000/api/local-ala")));
+        for(const h of [{...headers,host:"localhost:3000"},{...headers,origin:"https://evil.invalid"},{...headers,host:"evil.invalid"},{...headers,"x-forwarded-for":"203.0.113.1"},{...headers,forwarded:"host=evil"},{...headers,"x-aivra-local-demo":""}])assert.equal(isLocalRequest(request(h)),false);
+        for(const patch of [{NODE_ENV:"production"},{AIVRA_AI_ENABLED:"false"},{AIVRA_LOCAL_DEMO_ONLY:"false"},{AIVRA_LOCAL_ALA_LAUNCHER:""},{VERCEL:"1"},{CI:"1"}])assert.equal(localProcessEnabled({...localEnv,...patch}),false);
+        const env={AIVRA_PAID_MODEL_ID:"local-approved-id",AIVRA_LOCAL_PAID_BUDGET_USD:"1",AIVRA_LOCAL_PAID_INPUT_MICRO_USD:"1",AIVRA_LOCAL_PAID_OUTPUT_MICRO_USD:"1",AIVRA_LOCAL_FALLBACK_ENABLED:"false",OPENAI_API_KEY:"local-credential-canary-never-bill"};
+        assert.equal(readLocalPolicy({AIVRA_LOCAL_PAID_ENABLED:"false",AIVRA_LOCAL_FALLBACK_ENABLED:"false"}).paid_enabled,false);
+        const p=readLocalPolicy(env),directory=await mkdtemp(path.join(tmpdir(),"aivra-local-ledger-")),store=createLocalLedger(directory),authority=issueLocalAuthority(store);
+        const providers=createLocalProviders(authority,store,p,new Proxy(env,{get(target,key){if(key==="AIVRA_FALLBACK_API_KEY")throw Error("Disabled key must never be read");return Reflect.get(target,key);}}));assert.equal(providers.fallback,undefined);
+        const simulated=fixture(data(),p),owner=createALAAnalyzer({policy:p,execution:"local-demo",localAuthority:authority,store,paid:simulated.paid,clock:Date.now});
+        assert.equal((await owner(session,caller)).status,"success");assert.deepEqual(simulated.calls(),{paid:1,fallback:0});
+        const builtLocal=buildALARequest(session);assert.ok(builtLocal.ok);
+        const denied=await createAIRouter({policy:p,execution:"local-demo",store,paid:simulated.paid})(builtLocal.request,{schema:ALAResultSchema,references:{allow_empty:true,duplicates:"reject",extract:()=>[]}},caller);assert.equal(denied.ok,false);assert.deepEqual(simulated.calls(),{paid:1,fallback:0});
+        const wrongModule=await createAIRouter({policy:p,execution:"local-demo",localAuthority:authority,store,paid:simulated.paid})({...builtLocal.request,module:"licenses"},{schema:ALAResultSchema,references:{allow_empty:true,duplicates:"reject",extract:()=>[]}},caller);assert.equal(wrongModule.ok,false);assert.deepEqual(simulated.calls(),{paid:1,fallback:0});
+        const exhaustedP={...p,paid:{...p.paid,monthly_budget_units:1}};const exhausted=fixture(data(),exhaustedP);
+        const capped=await createALAAnalyzer({policy:exhaustedP,execution:"local-demo",localAuthority:authority,store,paid:exhausted.paid,clock:Date.now})(session,caller);assert.ok(capped.status==="error"&&capped.error.code==="fallback_unavailable");assert.deepEqual(exhausted.calls(),{paid:0,fallback:0});
+
+        assert.throws(()=>readLocalPolicy({...env,AIVRA_LOCAL_PAID_BUDGET_USD:""}));assert.throws(()=>readLocalPolicy({...env,AIVRA_LOCAL_FALLBACK_ENABLED:"true"}));
+        assert.throws(()=>createLocalProviders(authority,store,p,{...env,OPENAI_API_KEY:"dummy-placeholder-key"}));
+        // Capture real SDK wire construction without network or a completion fixture.
+        const old=globalThis.fetch,seen:{url:string;body:Record<string,unknown>}[]=[];
+        globalThis.fetch=async(input,init)=>{seen.push({url:String(input),body:JSON.parse(String(init?.body))});throw Error("Intercepted SDK request only");};
+        try {
+          const built=buildALARequest(session);assert.ok(built.ok);
+          const model=providers.paid!;await assert.rejects(()=>model.generate({input:built.request,schema:(ALAResultSchema),signal:new AbortController().signal}));
+          assert.equal(seen.length,1);assert.equal(seen[0].url,"https://api.openai.com/v1/responses");assert.equal(seen[0].body.store,false);assert.match(JSON.stringify(seen[0].body.text),/json_schema/);
+          const fallbackEnv={...env,AIVRA_LOCAL_FALLBACK_ENABLED:"true",AIVRA_FALLBACK_PROVIDER:"openrouter",AIVRA_FALLBACK_MODEL_ID:"vendor/explicit-open-model",AIVRA_FALLBACK_API_KEY:"local-router-credential-canary",AIVRA_LOCAL_FALLBACK_BUDGET_USD:"1",AIVRA_LOCAL_FALLBACK_INPUT_MICRO_USD:"1",AIVRA_LOCAL_FALLBACK_OUTPUT_MICRO_USD:"1",AIVRA_LOCAL_OPEN_WEIGHT_APPROVED:"true",AIVRA_LOCAL_OPEN_WEIGHT_EVIDENCE:"https://example.invalid/offline-evidence",AIVRA_LOCAL_OPENROUTER_UPSTREAM:"offline-upstream"};
+          const fp=readLocalPolicy(fallbackEnv);
+          assert.throws(()=>createLocalProviders(authority,store,fp,{...fallbackEnv,AIVRA_FALLBACK_API_KEY:"dummy-placeholder-key"}));
+          const fallbackPolicy={...fp,paid_enabled:false},fallbackFixture=fixture(data(),fallbackPolicy);
+          const fallbackOwner=createALAAnalyzer({policy:fallbackPolicy,execution:"local-demo",localAuthority:authority,store,paid:fallbackFixture.paid,fallback:fallbackFixture.fallback,clock:Date.now});
+          const fallbackResult=await fallbackOwner(session,caller);assert.notEqual(fallbackResult.status,"error");if(fallbackResult.status!=="error"){assert.equal(fallbackResult.envelope.mode,"fallback");assert.equal(fallbackResult.envelope.routing_reason,"paid_unavailable");}assert.deepEqual(fallbackFixture.calls(),{paid:0,fallback:1});
+          const f=createLocalProviders(authority,store,fp,fallbackEnv).fallback!;
+          await assert.rejects(()=>f.generate({input:built.request,schema:ALAResultSchema,signal:new AbortController().signal}));assert.equal(seen.length,2);assert.equal(seen[1].url,"https://openrouter.ai/api/v1/chat/completions");assert.match(JSON.stringify(seen[1].body.response_format),/json_schema/);assert.deepEqual(seen[1].body.provider,{only:["offline-upstream"],allow_fallbacks:false,require_parameters:true});
+        }finally{globalThis.fetch=old;}
+        const changed=structuredClone(session);changed.current_deal.applications[0].notes="Unapproved source text must not reach providers";
+        const invalid=new Request("http://127.0.0.1:3000/api/local-ala",{method:"POST",headers:{...headers,"content-type":"application/json"},body:JSON.stringify({session:changed,synthetic_only:true,nonce:randomUUID()})});assert.equal((await localALAPost(invalid)).status,503);
+        const oversized=new Request("http://127.0.0.1:3000/api/local-ala",{method:"POST",headers:{...headers,"content-type":"application/json"},body:"x".repeat(128001)});assert.equal((await localALAPost(oversized)).status,503);
+        const slowBody=new ReadableStream<Uint8Array>({start(controller){controller.enqueue(new TextEncoder().encode(JSON.stringify({session,synthetic_only:true,nonce:randomUUID()})));}});
+        const slowInit:RequestInit & {duplex:"half"}={method:"POST",headers:{...headers,"content-type":"application/json"},body:slowBody,duplex:"half"};
+        const slowReply=await localALAPost(new Request("http://127.0.0.1:3000/api/local-ala",slowInit));assert.equal(slowReply.status,503);assert.equal((await slowReply.json()).error.code,"ai_controls_not_ready");
+
+        process.env.NODE_ENV="production";assert.equal((await localALAPost(request())).status,503);
+      }finally{for(const n of names){if(prior[n]===undefined)delete process.env[n];else process.env[n]=prior[n];}}
+    });
+    await check("local ledger reserves once, persists exposure, excludes concurrent processes and never substitutes test billing", async () => {
+      const directory=await mkdtemp(path.join(tmpdir(),"aivra-local-cost-")),store=createLocalLedger(directory),p=readLocalPolicy({AIVRA_PAID_MODEL_ID:"local-approved-id",AIVRA_LOCAL_PAID_BUDGET_USD:"1",AIVRA_LOCAL_PAID_INPUT_MICRO_USD:"1",AIVRA_LOCAL_PAID_OUTPUT_MICRO_USD:"1"});
+      const reserve=()=>({request_id:randomUUID(),input_digest:"a".repeat(64),client_key:caller.client_key,issued_at_ms:Date.now(),mode:"paid" as const,policy:p});
+      const first=reserve();assert.equal((await store.authorizeAndReserve(first)).authorized,true);assert.deepEqual(await createLocalLedger(directory).authorizeAndReserve(reserve()),{authorized:false,code:"capacity_reached"});
+      await store.settle({namespace:p.namespace,request_id:first.request_id,actual_units:1,usage_overflow:false});await store.settle({namespace:p.namespace,request_id:first.request_id,actual_units:1,usage_overflow:false});
+      assert.equal((await createLocalLedger(directory).getSafeUsageStatus({namespace:p.namespace,period_key:p.period_key})).paid.accounted_units,reservationUnits(p,"paid"));
+      const second=reserve();assert.equal((await store.authorizeAndReserve(second)).authorized,true);await store.settle({namespace:p.namespace,request_id:second.request_id,actual_units:null,usage_overflow:false});assert.equal((await createLocalLedger(directory).authorizeAndReserve(reserve())).authorized,false);
+      await unlink(path.join(directory,"ledger.json"));await assert.rejects(()=>createLocalLedger(directory).authorizeAndReserve(reserve()));
+      const f=fixture();const built=buildALARequest(session);assert.ok(built.ok);
+      const result=await createAIRouter({policy:f.p,store,execution:"offline-test",paid:f.paid,fallback:f.fallback,clock:f.clock})(built.request,{schema:ALAResultSchema,references:{allow_empty:true,duplicates:"reject",extract:()=>[]}},caller);assert.equal(result.ok,false);assert.deepEqual(f.calls(),{paid:0,fallback:0});
+    });
+    await check("local response reuses reviewed contract and current source bindings without importing fake analysis", async () => {
+      const f=fixture(),outcome=await f.analyze(session,caller);assert.notEqual(outcome.status,"error");const view=projectALAResults(outcome,session,session),draft=createReviewDraft(view),exported=buildReviewedExport(view,draft);assert.ok(exported.ok);
+      const nonce=randomUUID(),wire={status:"success",nonce,session_id:session.session_id,revision:session.input_revisions.applications,artifact:exported.artifact};assert.equal(readLocalALADisplay(wire,session,nonce).state,"current");assert.equal(readLocalALADisplay(wire,session,randomUUID()).state,"invalid");assert.equal(readLocalALADisplay(wire,createDemoSession(),nonce).state,"invalid");assert.equal(readLocalALADisplay({...wire,extra:"bad"},session,nonce).state,"invalid");
+    });
     await check("public UI has no dataset transport/success rendering; composition has no provider bypass or writes", async () => {
       const ui = await readFile("components/ala/analyze-applications.tsx", "utf8");
       assert.doesNotMatch(ui, /body:|JSON\.stringify|metadataFromValidatedResult|setView\(\{ status: "completed"|recordDerivedResultMetadata|sessionStorage/);
@@ -129,6 +211,22 @@ if (!process.argv.includes("--ala-browser")) {
 }
 
 export async function checkALAActionBrowser({ page, evaluate, until, base }: Parameters<typeof import("./check-csv-preview.mts").checkCSVBrowser>[0]) {
+  if(process.env.AIVRA_LOCAL_ALA_BROWSER==="1") {
+    await page("Page.navigate",{url:base+"/application-rationalization"});await until("!!document.querySelector('[aria-label=\"Local application analysis\"]') && !!document.querySelector('[data-session-ready=\"true\"]')");
+    const before=await evaluate("sessionStorage.getItem('aivra:r0:demo-session:v1')");
+    await evaluate("(()=>{const original=window.fetch.bind(window);window.fetch=async(...args)=>{const response=await original(...args);if(args[0]==='/api/local-ala')window.__localALAError=(await response.clone().json()).error?.code;return response;};})()");
+    for(const width of [1440,390,320]){
+      await page("Emulation.setDeviceMetricsOverride",{width,height:1000,deviceScaleFactor:1,mobile:false});
+      await evaluate("document.querySelector('.ala-analyze-button').focus()");await page("Input.dispatchKeyEvent",{type:"keyDown",key:"Enter",windowsVirtualKeyCode:13,text:"\r"});await page("Input.dispatchKeyEvent",{type:"keyUp",key:"Enter",windowsVirtualKeyCode:13});
+      await until("!!document.querySelector('.ai-notice--error') && !document.querySelector('.ala-analyze-button').disabled");
+      assert.equal(await evaluate("window.__localALAError"),"fallback_unavailable");
+      assert.match(await evaluate("document.querySelector('.ai-notice--error').textContent"),/unavailable|not ready/);assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"),false);
+      assert.equal(await evaluate("sessionStorage.getItem('aivra:r0:demo-session:v1')"),before);assert.equal(await evaluate("document.querySelectorAll('.ala-results-table tbody tr').length"),0);
+    }
+    const bad=await fetch(base+"/api/local-ala",{method:"POST",headers:{origin:"https://evil.invalid","Content-Type":"application/json","x-aivra-local-demo":"1"},body:"{}"});assert.equal(bad.status,503);
+    assert.equal((await fetch(base+"/api/ai/ala",{method:"POST"})).status,503);
+    console.log("PASS: local UI 1440/390/320, explicit keyboard action, both providers forcibly disabled, controlled unavailable, unchanged session, nonlocal-origin refusal and original public hard stop; zero live calls.");return;
+  }
   const tracker = `(() => {
     const original = window.fetch.bind(window); window.__alaCalls = []; window.__holdALA = false;
     window.fetch = (input, init) => {

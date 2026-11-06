@@ -162,7 +162,7 @@ try {
       }
     }
     const api = (await readdir("app", { recursive: true })).map((file) => file.replaceAll("\\", "/")).filter((file) => /^api(?:\/|$)/.test(file)).sort();
-    assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts", "api/ai/playbook", "api/ai/playbook/route.ts"]);
+    assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts", "api/ai/playbook", "api/ai/playbook/route.ts", "api/local-ala", "api/local-ala/route.ts"]);
     for (const routePath of ["app/api/ai/ala/route.ts", "app/api/ai/playbook/route.ts"]) {
     const route = await readFile(routePath, "utf8");
     assert.match(route, /export function POST\(\)/); assert.match(route, /status: 503/);

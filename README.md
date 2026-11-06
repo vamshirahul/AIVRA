@@ -35,6 +35,15 @@ credentials, AISFA, live AI or deployment. For telemetry settings, fresh-clone
 setup, optional independent browser checks, troubleshooting and CI logs, see
 [Local development and CI](docs/development/U00.09_Local_Development_and_CI.md).
 
+## Optional founder local-live ALA
+
+The separate [local ALA setup](docs/development/Local_Live_ALA.md) connects only
+Application Rationalization to a guarded, loopback-only OpenAI path. OpenRouter
+wiring is included but fallback is **off by default** and never uses a dummy key.
+Use the dedicated `npm run dev:local-ala` launcher and private operator-supplied
+configuration; ordinary/public/production AI remains disabled. Real calls may
+incur charges and were not run by Codex. This does not authorize deployment.
+
 ## Shared synthetic data (U00.02)
 
 Run `npm run validate:fixture` to check the shared Zod contracts, fictional

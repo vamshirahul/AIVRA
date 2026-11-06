@@ -1,5 +1,6 @@
 "use client";
 
+import { LocalAnalyzeApplications } from "./local-analyze-applications";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { useDemoSession } from "../demo-session-provider";
@@ -14,7 +15,10 @@ const ErrorReply = z.strictObject({ status: z.literal("error"), error: z.strictO
 }) });
 type View = Exclude<AIViewState, { status: "completed" }> | { status: "checking" };
 
-export function AnalyzeApplications() {
+export function AnalyzeApplications({ localDemo = false }: { localDemo?: boolean }) {
+  return localDemo ? <LocalAnalyzeApplications /> : <PublicAnalyzeApplications />;
+}
+function PublicAnalyzeApplications() {
   const { session, ready } = useDemoSession();
   const [view, setView] = useState<View>({ status: "not_enabled" });
   const inFlight = useRef<AbortController | null>(null);

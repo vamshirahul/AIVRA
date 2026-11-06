@@ -1,3 +1,4 @@
+import { localPageEnabled } from "../../lib/server/local-ala/page-availability";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -40,7 +41,7 @@ export default async function ModulePage({ params }: { params: Promise<{ module:
       <p className="page-description">{module.purpose}</p>
       {["/license-optimizer"].includes(module.href) && <AIStatusNotice state={{ status: "not_enabled" }} />}
 
-      {module.href === "/integration-health" ? <HealthDashboard /> : module.href === "/data-mapper" ? <SampleInventoryPreview /> : module.href === "/application-rationalization" ? <AnalyzeApplications /> : module.href === "/license-optimizer" ? <LicenseInventory /> : module.href === "/cost-synergy" ? <CostSynergyEstimateWorkspace /> : module.href === "/scenario-modeling" ? <ScenarioWorkspace /> : module.href === "/tsa-tracker" ? <TSAInventory /> : module.href === "/playbook-generator" ? <GeneratePlaybook /> : module.href === "/ai-assistant" ? <AssistantWorkspace /> : null}
+      {module.href === "/integration-health" ? <HealthDashboard /> : module.href === "/data-mapper" ? <SampleInventoryPreview /> : module.href === "/application-rationalization" ? <AnalyzeApplications localDemo={localPageEnabled()} /> : module.href === "/license-optimizer" ? <LicenseInventory /> : module.href === "/cost-synergy" ? <CostSynergyEstimateWorkspace /> : module.href === "/scenario-modeling" ? <ScenarioWorkspace /> : module.href === "/tsa-tracker" ? <TSAInventory /> : module.href === "/playbook-generator" ? <GeneratePlaybook /> : module.href === "/ai-assistant" ? <AssistantWorkspace /> : null}
     </div>
   );
 }

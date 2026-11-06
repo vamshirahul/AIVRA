@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Local-only ALA accounting: costs/locks, never deployment state
+.local-ala/

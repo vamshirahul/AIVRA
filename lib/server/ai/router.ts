@@ -1,6 +1,8 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
+import { validLocalAuthority } from "./local-authority.ts";
+import type { LocalAuthority } from "./local-authority.ts";
 import { createAIAdapter, validateInvocation } from "./adapter.ts";
 import { ControlPolicySchema, DEFAULT_CONTROL_POLICY, reservationUnits, usageCost } from "./control-policy.ts";
 import type { RouteMode } from "./control-policy.ts";
@@ -10,12 +12,12 @@ import { AuthorizationSchema, SettlementSchema } from "./usage-store.ts";
 import type { UsageStore } from "./usage-store.ts";
 
 type RouterOptions = {
-  policy?: unknown; execution?: "offline-test"; store?: UsageStore;
+  policy?: unknown; execution?: "offline-test" | "local-demo"; localAuthority?: LocalAuthority; store?: UsageStore;
   paid?: StructuredTransport; fallback?: StructuredTransport; clock?: () => number;
 };
 const CallerSchema = z.strictObject({ client_key: z.string().regex(/^[a-f0-9]{64}$/), request_id: z.uuid().optional() });
 
-/** Future protected server entrypoint. Only explicit offline composition runs today. */
+/** Guarded entrypoint: offline tests, or private local-ALA authority only. Production stays disabled. */
 export function createAIRouter(options: RouterOptions = {}) {
   return async function invoke<T>(request: InvocationInput, contract: OutputContract<T>, caller?: z.infer<typeof CallerSchema>): Promise<AdapterResult<T>> {
     const requestId = caller?.request_id && z.uuid().safeParse(caller.request_id).success ? caller.request_id : randomUUID();
@@ -24,7 +26,7 @@ export function createAIRouter(options: RouterOptions = {}) {
       if (!config.success) return failure("invalid_input", requestId);
       if (!config.data.enabled) return failure("ai_disabled", requestId);
       const policy = config.data;
-      if (options.execution !== "offline-test" || !options.store) return failure("controls_unavailable", requestId);
+      if (!options.store || (options.execution === "local-demo" ? !validLocalAuthority(options.localAuthority, options.store, request.module) : options.execution !== "offline-test" || options.store.kind === "local-demo")) return failure("controls_unavailable", requestId);
       const identity = CallerSchema.safeParse(caller);
       if (!identity.success) return failure("controls_unavailable", requestId);
       const preflight = validateInvocation(request, contract);

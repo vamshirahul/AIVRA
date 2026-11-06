@@ -25,7 +25,7 @@ export type SafeUsageStatus = z.infer<typeof SafeUsageStatusSchema>;
 
 /** Each method is ONE atomic operation, not a read/modify/write client sequence. */
 export interface UsageStore {
-  readonly kind: "offline-test" | "durable-atomic-contract";
+  readonly kind: "offline-test" | "durable-atomic-contract" | "local-demo";
   authorizeAndReserve(request: ReserveRequest): Promise<Authorization>;
   settle(request: SettleRequest): Promise<Settlement>;
   getSafeUsageStatus(request: z.infer<typeof StatusRequestSchema>): Promise<SafeUsageStatus>;

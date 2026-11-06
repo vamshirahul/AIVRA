@@ -165,7 +165,7 @@ try {
     const action = await readFile("components/ala/analyze-applications.tsx", "utf8"); assert.match(action, /ALAReviewWorkspace view=\{\{ state: "absent" \}\}/);
     assert.doesNotMatch(action, /body:|JSON\.stringify|projectALAResults|server\/ala|status: "current"|mock|fixture/);
     const api = (await readdir("app", { recursive: true })).map((s) => s.replaceAll("\\", "/")).filter((s) => /^api(?:\/|$)/.test(s)).sort();
-    assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts", "api/ai/playbook", "api/ai/playbook/route.ts"]);
+    assert.deepEqual(api, ["api", "api/ai", "api/ai/ala", "api/ai/ala/route.ts", "api/ai/playbook", "api/ai/playbook/route.ts", "api/local-ala", "api/local-ala/route.ts"]);
   });
   await check("deterministic table/a11y/CSS layout: caption, scoped headers, row groups, focusable scroll and full native details", async () => {
     const rendered = html(projectALAResults(mock(), session, session));

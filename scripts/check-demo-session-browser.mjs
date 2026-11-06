@@ -27,11 +27,12 @@ seed.session_revision++;
 const seedJSON = serializeSession(seed);
 const keyLiteral = JSON.stringify(SESSION_STORAGE_KEY);
 const evidence = { checks: [], runtimeErrors: [], limitations: "Focused Chromium keyboard/DOM/AX checks; no full WCAG or physical-device test. Browser input is seeded through the real validated controller; no production test globals." };
+const privacyChecks = process.argv.includes("--privacy-browser");
 const tsaEditChecks = process.argv.includes("--tsa-edit-browser");
 const playbookChecks = process.argv.includes("--playbook-browser");
 const tsaExportChecks = process.argv.includes("--tsa-export-browser");
 const tsaChecks = playbookChecks || tsaExportChecks || tsaEditChecks || process.argv.includes("--tsa-browser");
-const output = playbookChecks ? ".temp/u04-02" : tsaExportChecks ? ".temp/u07-03" : tsaEditChecks ? ".temp/u07-02" : tsaChecks ? ".temp/u07-01" : "artifacts/u00-05";
+const output = privacyChecks ? ".temp/u90-03" : playbookChecks ? ".temp/u04-02" : tsaExportChecks ? ".temp/u07-03" : tsaEditChecks ? ".temp/u07-02" : tsaChecks ? ".temp/u07-01" : "artifacts/u00-05";
 const downloads = [], completedDownloads = new Set();
 await mkdir(output, { recursive: true });
 const profile = await mkdtemp(path.join(tmpdir(), "aivra-u05-chromium-"));
@@ -102,7 +103,13 @@ try {
     await waitFor("!document.querySelector('.session-confirmation') && document.activeElement.textContent==='Reset demo session'");
   }
   await page("Page.enable"); await page("Runtime.enable");
-  if (tsaChecks) {
+  if (privacyChecks) {
+    const { checkPrivacyBrowser } = await import("./check-privacy-browser.mjs");
+    await checkPrivacyBrowser({ page, evaluate, waitFor, load, key, base, output, evidence, socket });
+    assert.deepEqual(evidence.runtimeErrors, []);
+    await writeFile(`${output}/browser-checks.json`, JSON.stringify(evidence, null, 2));
+    console.log(`PASS: ${evidence.checks.length} U90.03 public browser groups.`);
+  } else if (tsaChecks) {
     if (playbookChecks) {
       const { checkPlaybookBrowser } = await import("./check-playbook-action.mts");
       await checkPlaybookBrowser({ page, evaluate, waitFor, load, key, base, output, evidence });
